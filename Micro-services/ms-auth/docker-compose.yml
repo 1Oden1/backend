@@ -1,0 +1,64 @@
+services:
+
+  # ── MySQL ──────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ent_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: ent_user
+      MYSQL_PASSWORD: ent_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ── Keycloak ───────────────────────────────────────────────
+  keycloak:
+    image: keycloak/keycloak:25.0
+    container_name: ent_keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_password
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql:3306/keycloak
+      KC_DB_USERNAME: ent_user
+      KC_DB_PASSWORD: ent_password
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── Microservice Auth ──────────────────────────────────────
+  ms-auth:
+    build: .
+    container_name: ent_ms_auth
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ent-sale
+      KEYCLOAK_CLIENT_ID: ent-backend
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - keycloak
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:

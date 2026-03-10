@@ -1,0 +1,31 @@
+services:
+
+  ms-download:
+    build: .
+    container_name: ent_ms_download
+    restart: unless-stopped
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT_PUBLIC: localhost:9000
+      MINIO_ACCESS_KEY: ent_user
+      MINIO_SECRET_KEY: ent_password
+      MINIO_BUCKET: ent-courses
+      CASSANDRA_HOST: ent_cassandra
+      CASSANDRA_KEYSPACE: ent_files
+      KEYCLOAK_URL: http://ent_keycloak:8080
+      KEYCLOAK_REALM: ent-sale
+      JWT_ALGORITHM: RS256
+    ports:
+      - "8003:8000"
+    volumes:
+      - .:/app
+    networks:
+      - ms-upload_default   # accès Cassandra + MinIO
+      - ms-auth_default     # accès Keycloak
+      - default
+
+networks:
+  ms-upload_default:
+    external: true
+  ms-auth_default:
+    external: true

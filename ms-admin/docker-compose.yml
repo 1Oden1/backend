@@ -1,0 +1,48 @@
+services:
+
+  ms-admin:
+    build: .
+    container_name: ent_ms_admin
+    restart: unless-stopped
+    environment:
+      # MySQL
+      MYSQL_HOST:          ent_mysql
+      MYSQL_PORT:          3306
+      MYSQL_USER:          ent_user
+      MYSQL_PASSWORD:      ent_password
+      MYSQL_DB_CALENDAR:   ent_calendar
+      MYSQL_DB_NOTES:      ent_notes
+      # Cassandra
+      CASSANDRA_HOST:      ent_cassandra
+      CASSANDRA_KEYSPACE:  ent_files
+      # MinIO
+      MINIO_ENDPOINT:      minio:9000
+      MINIO_ACCESS_KEY:    ent_user
+      MINIO_SECRET_KEY:    ent_password
+      MINIO_BUCKET:        ent-courses
+      # Keycloak
+      KEYCLOAK_URL:            http://ent_keycloak:8080
+      KEYCLOAK_REALM:          ent-sale
+      KEYCLOAK_ADMIN_USER:     admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_password
+      KEYCLOAK_CLIENT_ID:      ent-backend
+      KEYCLOAK_CLIENT_SECRET:  change-me-in-production
+      JWT_ALGORITHM:           RS256
+      MS_MESSAGING_URL:        http://ent_ms_messaging:8000
+    ports:
+      - "8006:8000"
+    volumes:
+      - .:/app
+    networks:
+      - ms-auth_default     # accès ent_mysql + ent_keycloak
+      - ms-upload_default   # accès ent_cassandra + minio
+      - ent_rabbitmq_net    # accès ent_ms_messaging
+      - default
+
+networks:
+  ms-auth_default:
+    external: true
+  ms-upload_default:
+    external: true
+  ent_rabbitmq_net:
+    external: true

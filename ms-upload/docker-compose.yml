@@ -1,0 +1,74 @@
+services:
+
+  minio:
+    image: minio/minio:latest
+    container_name: ent_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ent_user
+      MINIO_ROOT_PASSWORD: ent_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: ent_cassandra
+    restart: unless-stopped
+    environment:
+      CASSANDRA_CLUSTER_NAME: ENTCluster
+      CASSANDRA_DC: datacenter1
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  ms-upload:
+    build: .
+    container_name: ent_ms_upload
+    restart: unless-stopped
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ent_user
+      MINIO_SECRET_KEY: ent_password
+      MINIO_BUCKET: ent-courses
+      CASSANDRA_HOST: ent_cassandra
+      CASSANDRA_KEYSPACE: ent_files
+      KEYCLOAK_URL: http://ent_keycloak:8080
+      KEYCLOAK_REALM: ent-sale
+      JWT_ALGORITHM: RS256
+      MAX_FILE_SIZE_MB: 50
+    ports:
+      - "8002:8000"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    networks:
+      - default
+      - ms-auth_default     # accès Keycloak
+
+networks:
+  ms-auth_default:
+    external: true
+
+volumes:
+  minio_data:
+  cassandra_data:

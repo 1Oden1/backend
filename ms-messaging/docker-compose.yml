@@ -1,0 +1,71 @@
+services:
+
+  ms-messaging:
+    build: .
+    container_name: ent_ms_messaging
+    restart: unless-stopped
+    environment:
+      # MySQL
+      MYSQL_HOST:          ent_mysql
+      MYSQL_PORT:          3306
+      MYSQL_USER:          ent_user
+      MYSQL_PASSWORD:      ent_password
+      MYSQL_DB_CALENDAR:   ent_calendar
+      MYSQL_DB_NOTES:      ent_notes
+      # Cassandra
+      CASSANDRA_HOST:      ent_cassandra
+      CASSANDRA_KEYSPACE:  ent_messaging
+      # RabbitMQ
+      RABBITMQ_URL:        amqp://ent_user:ent_password@ent_rabbitmq:5672/
+      RABBITMQ_EXCHANGE:   ent.events
+      RABBITMQ_QUEUE:      ms_messaging_queue
+      # Keycloak
+      KEYCLOAK_URL:            http://ent_keycloak:8080
+      KEYCLOAK_REALM:          ent-sale
+      KEYCLOAK_ADMIN_USER:     admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_password
+      KEYCLOAK_CLIENT_ID:      ent-backend
+      JWT_ALGORITHM:           RS256
+    ports:
+      - "8007:8000"
+    volumes:
+      - .:/app
+    networks:
+      - ms-auth_default     # accès ent_mysql + ent_keycloak
+      - ms-upload_default   # accès ent_cassandra
+      - ent_rabbitmq_net    # accès ent_rabbitmq
+    depends_on:
+      ent_rabbitmq:
+        condition: service_healthy
+
+  # ── RabbitMQ ──────────────────────────────────────────────────────────────
+  ent_rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ent_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ent_user
+      RABBITMQ_DEFAULT_PASS: ent_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ent_rabbitmq_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  ms-auth_default:
+    external: true
+  ms-upload_default:
+    external: true
+  ent_rabbitmq_net:
+    name: ent_rabbitmq_net

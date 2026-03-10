@@ -1,0 +1,33 @@
+services:
+
+  ms-notes:
+    build: .
+    container_name: ent_ms_notes
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST:             ent_mysql
+      MYSQL_PORT:             3306
+      MYSQL_USER:             ent_user
+      MYSQL_PASSWORD:         ent_password
+      MYSQL_DATABASE:         ent_notes
+      KEYCLOAK_URL:           http://ent_keycloak:8080
+      KEYCLOAK_REALM:         ent-sale
+      KEYCLOAK_CLIENT_ID:     ent-backend
+      JWT_ALGORITHM:          RS256
+      RABBITMQ_URL:           amqp://ent_user:ent_password@ent_rabbitmq:5672/
+      MS_CALENDAR_URL:        http://ent_ms_calendar:8000
+      INTERNAL_SERVICE_TOKEN: ""   # à renseigner en production
+    ports:
+      - "8005:8000"
+    networks:
+      - ms-auth_default
+      - ent_rabbitmq_net
+      - ms-calendar_default
+
+networks:
+  ms-auth_default:
+    external: true
+  ent_rabbitmq_net:
+    external: true
+  ms-calendar_default:
+    external: true

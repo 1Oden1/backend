@@ -1,0 +1,28 @@
+services:
+
+  ms-calendar:
+    build: .
+    container_name: ent_ms_calendar
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST:     ent_mysql
+      MYSQL_PORT:     3306
+      MYSQL_USER:     ent_user
+      MYSQL_PASSWORD: ent_password
+      MYSQL_DATABASE: ent_calendar
+      KEYCLOAK_URL:   http://ent_keycloak:8080
+      KEYCLOAK_REALM: ent-sale
+      JWT_ALGORITHM:  RS256
+    ports:
+      - "8004:8000"
+    volumes:
+      - .:/app
+    # depends_on supprimé : MySQL est dans un projet Compose séparé (ms-auth).
+    # L'attente est gérée par _wait_for_db() dans main.py (15 tentatives x 3s).
+    networks:
+      - ms-auth_default   # réseau partagé → accès à ent_mysql + ent_keycloak
+      - default
+
+networks:
+  ms-auth_default:
+    external: true

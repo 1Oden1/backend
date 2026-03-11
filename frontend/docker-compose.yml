@@ -31,7 +31,8 @@ services:
     ports:
       - "8000:80"           # ← accessible sur http://localhost:8000
     networks:
-      - ms-auth_default     # tous les microservices sont sur ce réseau
+      - ms-auth_default
+      - default     
     environment:
       - TZ=Africa/Casablanca
     labels:

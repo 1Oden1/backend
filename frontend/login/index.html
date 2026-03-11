@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENT – EST Salé · Authentification</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!--
+    Sur Docker : MS_AUTH_URL = '/api'
+    Nginx proxifie /api/auth/* → ent_ms_auth:8000/auth/*
+    En dev local sans Docker : remplacer par 'http://localhost:8001'
+  -->
+  <script>
+    window.ENV = {
+      MS_AUTH_URL:      '/api',
+      REDIRECT_SUCCESS: '/dashboard.html',
+    };
+  </script>
+</head>
+<body>
+
+  <div class="bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="particles"></div>
+
+  <div class="wrapper">
+    <div class="card">
+
+      <div class="logo-area">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-title">EST Salé</div>
+        <div class="logo-sub">Espace Numérique de Travail</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <p style="font-size:12px; color:#9b7ab5; margin-bottom:18px; text-align:center;">
+        👤
+        <a href="#" id="validate-account" style="color:#c44dff; text-decoration:none; font-weight:600;">
+          Nouveau à l'université ? Validez votre compte
+        </a>
+      </p>
+
+      <form id="login-form" novalidate>
+
+        <div class="form-group">
+          <label for="username">Identifiant</label>
+          <div class="input-wrap">
+            <span class="icon">👤</span>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Votre identifiant ENT"
+              autocomplete="username"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <div class="input-wrap">
+            <span class="icon">🔒</span>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" id="toggle-pw" class="toggle-pw" aria-label="Afficher le mot de passe">
+              👁
+            </button>
+          </div>
+        </div>
+
+        <div class="forgot">
+          <a href="#" id="forgot-link">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" id="btn-login" class="btn-login">
+          <span class="btn-text">Se connecter</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div id="alert" class="alert" role="alert"></div>
+
+      </form>
+
+      <div class="card-footer">
+        <p>Besoin d'aide ? <a href="mailto:support@est-sale.ac.ma">Contacter le support</a></p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>

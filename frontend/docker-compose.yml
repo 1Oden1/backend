@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────
+# ENT – EST Salé  |  Frontend (Nginx)
+#
+# Réseaux externes (créés par chaque micro-service) :
+#   ms-auth_default     ← ms-auth       : ent_ms_auth, ent_keycloak, ent_mysql
+#   ms-upload_default   ← ms-upload     : ent_ms_upload, ent_cassandra, ent_minio
+#   ms-calendar_default ← ms-calendar   : ent_ms_calendar
+#   ms-admin_default    ← ms-admin      : ent_ms_admin
+#   ms-notes_default    ← ms-notes      : ent_ms_notes
+#   ms-download_default ← ms-download   : ent_ms_download
+#
+# Ordre de démarrage :
+#   1. cd ms-auth      && docker compose up -d
+#   2. cd ms-upload    && docker compose up -d
+#   3. cd ms-messaging && docker compose up -d   (RabbitMQ utilisé par notes/admin)
+#   4. cd ms-calendar  && docker compose up -d
+#   5. cd ms-notes     && docker compose up -d
+#   6. cd ms-admin     && docker compose up -d
+#   7. cd ms-download  && docker compose up -d
+#   8. cd frontend     && docker compose up -d
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  ent-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ent_frontend
+    restart: unless-stopped
+    ports:
+      - "8000:80"           # ← accessible sur http://localhost:8000
+    networks:
+      - ms-auth_default     # tous les microservices sont sur ce réseau
+    environment:
+      - TZ=Africa/Casablanca
+    labels:
+      - "com.est-sale.service=frontend"
+
+networks:
+  ms-auth_default:
+    external: true

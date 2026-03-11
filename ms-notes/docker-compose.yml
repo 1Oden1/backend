@@ -23,6 +23,7 @@ services:
       - ms-auth_default
       - ent_rabbitmq_net
       - ms-calendar_default
+      - default
 
 networks:
   ms-auth_default:

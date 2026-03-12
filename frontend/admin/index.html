@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ENT Salé — Administration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-icon">🎓</div>
+        <div class="brand-text">
+          <span class="brand-sup">ENT Salé</span>
+          <span class="brand-name">Administration</span>
+        </div>
+      </div>
+      <div class="user-chip">
+        <div class="avatar" id="avatarEl">A</div>
+        <div class="user-info">
+          <span class="user-name" id="userNameEl">Administrateur</span>
+          <span class="user-role">Admin · EST Salé</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-list">
+      <div class="nav-group">
+        <span class="nav-label">Tableau de bord</span>
+        <a class="nav-item active" data-panel="dashboard" href="#">
+          <span class="nav-icon">📊</span>Vue d'ensemble
+        </a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Gestion</span>
+        <a class="nav-item" data-panel="users"    href="#"><span class="nav-icon">👥</span>Utilisateurs</a>
+        <a class="nav-item" data-panel="files"    href="#"><span class="nav-icon">📁</span>Fichiers &amp; Cours</a>
+        <a class="nav-item" data-panel="calendar" href="#"><span class="nav-icon">📅</span>Calendrier</a>
+        <a class="nav-item" data-panel="notes"    href="#"><span class="nav-icon">📊</span>Notes</a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Système</span>
+        <a class="nav-item" data-panel="audit"  href="#"><span class="nav-icon">🔍</span>Journal d'audit</a>
+        <a class="nav-item" data-panel="health" href="#"><span class="nav-icon">💚</span>État des services</a>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="logout-btn" id="logoutBtn">🚪 Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <header class="topbar">
+      <h2 class="topbar-title" id="topbarTitle">Vue d'ensemble</h2>
+      <div class="topbar-actions">
+        <button class="btn btn-outline btn-sm" id="refreshBtn">↻ Actualiser</button>
+        <button class="btn btn-gold  btn-sm" id="addUserBtn">+ Utilisateur</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <section class="panel active" id="panel-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" id="st-users">—</div><div class="stat-lbl">Utilisateurs</div></div>
+          <div class="stat-card"><div class="stat-icon">📁</div><div class="stat-val" id="st-files">—</div><div class="stat-lbl">Fichiers</div></div>
+          <div class="stat-card"><div class="stat-icon">🏛️</div><div class="stat-val" id="st-filieres">—</div><div class="stat-lbl">Filières</div></div>
+          <div class="stat-card"><div class="stat-icon">💚</div><div class="stat-val" id="st-services">—</div><div class="stat-lbl">Services actifs</div></div>
+        </div>
+        <h3 class="section-title">État des microservices</h3>
+        <div class="services-grid" id="servicesGrid"></div>
+        <h3 class="section-title" style="margin-top:2rem">Fichiers récents</h3>
+        <div id="recentFilesList"></div>
+      </section>
+
+      <!-- ── USERS ── -->
+      <section class="panel" id="panel-users">
+        <div class="section-head">
+          <h3 class="section-title">Utilisateurs Keycloak</h3>
+          <button class="btn btn-gold" id="createUserBtn2">+ Créer</button>
+        </div>
+        <div class="table-wrap" id="usersTable"></div>
+      </section>
+
+      <!-- ── FILES ── -->
+      <section class="panel" id="panel-files">
+        <div class="section-head">
+          <h3 class="section-title">Fichiers pédagogiques</h3>
+          <select class="select-sm" id="fileCatFilter">
+            <option value="">Toutes catégories</option>
+            <option value="cours">Cours</option>
+            <option value="td">TD</option>
+            <option value="tp">TP</option>
+            <option value="examen">Examens</option>
+          </select>
+        </div>
+        <div class="cards-grid" id="filesGrid"></div>
+      </section>
+
+      <!-- ── CALENDAR ── -->
+      <section class="panel" id="panel-calendar">
+        <div class="section-head">
+          <h3 class="section-title">Structure académique — Filières</h3>
+          <button class="btn btn-gold" id="addFiliereBtn">+ Filière</button>
+        </div>
+        <div id="calendarContent"></div>
+      </section>
+
+      <!-- ── NOTES ── -->
+      <section class="panel" id="panel-notes">
+        <div class="section-head"><h3 class="section-title">Étudiants enregistrés</h3></div>
+        <div id="notesContent"></div>
+      </section>
+
+      <!-- ── AUDIT ── -->
+      <section class="panel" id="panel-audit">
+        <div class="section-head"><h3 class="section-title">Journal d'audit</h3></div>
+        <div id="auditList"></div>
+      </section>
+
+      <!-- ── HEALTH ── -->
+      <section class="panel" id="panel-health">
+        <div class="section-head"><h3 class="section-title">Santé des microservices</h3><button class="btn btn-outline btn-sm" id="reloadHealthBtn">↻ Vérifier</button></div>
+        <div class="services-grid" id="healthGrid"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ══ MODAL : Créer utilisateur ══ -->
+  <div class="modal-overlay" id="modalUser">
+    <div class="modal">
+      <h3>Créer un utilisateur</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Prénom</label><input type="text" id="uFirstName" placeholder="Prénom"/></div>
+        <div class="form-group"><label>Nom</label><input type="text" id="uLastName" placeholder="Nom"/></div>
+        <div class="form-group full"><label>Identifiant</label><input type="text" id="uUsername" placeholder="identifiant"/></div>
+        <div class="form-group full"><label>Email</label><input type="email" id="uEmail" placeholder="email@est.ma"/></div>
+        <div class="form-group"><label>Mot de passe</label><input type="password" id="uPassword" placeholder="••••••••"/></div>
+        <div class="form-group"><label>Rôle</label>
+          <select id="uRole">
+            <option value="etudiant">Étudiant</option>
+            <option value="enseignant">Enseignant</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" id="cancelUserModal">Annuler</button>
+        <button class="btn btn-gold"    id="confirmUserModal">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL : Créer filière ══ -->
+  <div class="modal-overlay" id="modalFiliere">
+    <div class="modal">
+      <h3>Créer une filière</h3>
+      <div class="form-group"><label>Libellé</label><input type="text" id="fLabel" placeholder="ex: Informatique"/></div>
+      <div class="form-group"><label>Code</label><input type="text" id="fCode" placeholder="ex: INFO"/></div>
+      <div class="form-group"><label>ID Département</label><input type="number" id="fDeptId" placeholder="1"/></div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" id="cancelFiliereModal">Annuler</button>
+        <button class="btn btn-gold"    id="confirmFiliereModal">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TOAST ══ -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

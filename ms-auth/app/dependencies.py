@@ -6,15 +6,40 @@ from app.config import settings
 
 bearer_scheme = HTTPBearer()
 
-REALM_URL = f"{settings.KEYCLOAK_URL}/realms/{settings.KEYCLOAK_REALM}"
+REALM_URL  = f"{settings.KEYCLOAK_URL}/realms/{settings.KEYCLOAK_REALM}"
+CERTS_URL  = f"{REALM_URL}/protocol/openid-connect/certs"
 
-async def get_public_key() -> str:
-    async with httpx.AsyncClient() as client:
-        res = await client.get(f"{REALM_URL}/protocol/openid-connect/certs")
+# ── Cache de la clé publique ───────────────────────────────────────────────────
+# On ne va chercher la clé Keycloak qu'une seule fois au lieu de le faire
+# à chaque requête (évite le httpx.ReadTimeout).
+_public_key_cache: dict | None = None
+
+async def get_public_key() -> dict:
+    global _public_key_cache
+
+    if _public_key_cache is not None:
+        return _public_key_cache
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.get(CERTS_URL)
+            res.raise_for_status()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Keycloak inaccessible (timeout). Réessayez dans quelques instants.",
+        )
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Erreur Keycloak : {str(e)}",
+        )
+
     certs = res.json()
-    # Retourne la première clé publique RS256
-    key = certs["keys"][0]
-    return key
+    # python-jose attend le JWKS complet {"keys": [...]}
+    _public_key_cache = certs
+    return _public_key_cache
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
@@ -26,7 +51,6 @@ async def get_current_user(
             token,
             public_key,
             algorithms=["RS256"],
-            audience="account",
             options={"verify_aud": False},
         )
         return payload

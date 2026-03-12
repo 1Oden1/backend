@@ -1,104 +1,98 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ENT – EST Salé · Authentification</title>
-  <link rel="stylesheet" href="style.css" />
-
-  <!--
-    Sur Docker : MS_AUTH_URL = '/api'
-    Nginx proxifie /api/auth/* → ent_ms_auth:8000/auth/*
-    En dev local sans Docker : remplacer par 'http://localhost:8001'
-  -->
-  <script>
-    window.ENV = {
-      MS_AUTH_URL:      '/api',
-      REDIRECT_SUCCESS: '/dashboard.html',
-    };
-  </script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ENT Salé — Connexion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+  <div class="bg-canvas"></div>
+  <div class="bg-grid"></div>
 
-  <div class="bg"></div>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-  <div class="particles"></div>
+  <div class="layout">
 
-  <div class="wrapper">
-    <div class="card">
+    <!-- ── PANNEAU GAUCHE ── -->
+    <aside class="left-panel">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
 
-      <div class="logo-area">
+      <header class="logo-block">
         <div class="logo-icon">🎓</div>
-        <div class="logo-title">EST Salé</div>
-        <div class="logo-sub">Espace Numérique de Travail</div>
+        <div class="logo-text">
+          <span class="logo-sup">Université Mohammed V · Rabat</span>
+          <span class="logo-main">École Supérieure de Technologie de Salé</span>
+        </div>
+      </header>
+
+      <div class="hero-text">
+        <h1>Votre <em>Espace<br/>Numérique</em><br/>de Travail</h1>
+        <p>Plateforme académique centralisée, augmentée par l'intelligence artificielle Ollama / Llama 3, pour étudiants, enseignants et administrateurs.</p>
       </div>
 
-      <div class="divider"></div>
+      <ul class="feature-pills">
+        <li>📚 Cours &amp; Fichiers</li>
+        <li>📅 Emploi du temps</li>
+        <li>📊 Notes &amp; Relevés</li>
+        <li>💬 Messagerie</li>
+        <li>🤖 IA Ollama / Llama 3</li>
+        <li>🔐 SSO Keycloak</li>
+      </ul>
 
-      <p style="font-size:12px; color:#9b7ab5; margin-bottom:18px; text-align:center;">
-        👤
-        <a href="#" id="validate-account" style="color:#c44dff; text-decoration:none; font-weight:600;">
-          Nouveau à l'université ? Validez votre compte
-        </a>
-      </p>
+      <footer class="left-footer">© 2025 EST Salé · Tous droits réservés</footer>
+    </aside>
 
-      <form id="login-form" novalidate>
+    <!-- ── PANNEAU DROIT (formulaire) ── -->
+    <main class="right-panel">
+      <div class="card">
+        <div class="card-top-bar"></div>
 
-        <div class="form-group">
+        <div class="card-header">
+          <span class="card-tag">Authentification</span>
+          <h2>Connexion<br/>à l'ENT</h2>
+          <p>Utilisez vos identifiants universitaires Keycloak.</p>
+        </div>
+
+        <div class="field">
           <label for="username">Identifiant</label>
           <div class="input-wrap">
-            <span class="icon">👤</span>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              placeholder="Votre identifiant ENT"
-              autocomplete="username"
-              required
-            />
+            <svg class="input-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="field">
           <label for="password">Mot de passe</label>
           <div class="input-wrap">
-            <span class="icon">🔒</span>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              required
-            />
-            <button type="button" id="toggle-pw" class="toggle-pw" aria-label="Afficher le mot de passe">
-              👁
+            <svg class="input-icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+            <button class="eye-btn" id="eyeBtn" type="button" title="Afficher/masquer">
+              <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
+          <a href="#" class="forgot-link">Mot de passe oublié ?</a>
         </div>
 
-        <div class="forgot">
-          <a href="#" id="forgot-link">Mot de passe oublié ?</a>
-        </div>
-
-        <button type="submit" id="btn-login" class="btn-login">
-          <span class="btn-text">Se connecter</span>
-          <div class="spinner"></div>
+        <button class="btn-login" id="loginBtn" type="button">
+          <span id="btnLabel">Se connecter</span>
         </button>
 
-        <div id="alert" class="alert" role="alert"></div>
+        <div class="error-msg" id="errorBox" role="alert">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="errorText"></span>
+        </div>
 
-      </form>
-
-      <div class="card-footer">
-        <p>Besoin d'aide ? <a href="mailto:support@est-sale.ac.ma">Contacter le support</a></p>
+        <div class="info-divider"><span>Information</span></div>
+        <div class="info-box">
+          Vos droits d'accès (<strong>étudiant</strong>, <strong>enseignant</strong>, <strong>admin</strong>) sont automatiquement détectés via le token Keycloak.
+        </div>
       </div>
+    </main>
 
-    </div>
   </div>
 
-  <script src="auth.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ENT Salé — Espace Étudiant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-icon">🎓</div>
+        <div class="brand-text">
+          <span class="brand-sup">ENT Salé</span>
+          <span class="brand-name">Espace Étudiant</span>
+        </div>
+      </div>
+      <div class="user-chip">
+        <div class="avatar" id="avatarEl">É</div>
+        <div class="user-info">
+          <span class="user-name" id="userNameEl">Étudiant</span>
+          <span class="user-role">Étudiant · EST Salé</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-list">
+      <div class="nav-group">
+        <span class="nav-label">Mon espace</span>
+        <a class="nav-item active" data-panel="accueil"    href="#"><span class="nav-icon">🏠</span>Accueil</a>
+        <a class="nav-item"        data-panel="cours"      href="#"><span class="nav-icon">📚</span>Cours &amp; Fichiers</a>
+        <a class="nav-item"        data-panel="notes"      href="#"><span class="nav-icon">📊</span>Mes Notes</a>
+        <a class="nav-item"        data-panel="emploi"     href="#"><span class="nav-icon">📅</span>Emploi du temps</a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Demandes</span>
+        <a class="nav-item" data-panel="releve"     href="#"><span class="nav-icon">📄</span>Relevé de notes</a>
+        <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon">🏆</span>Mon classement</a>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="logout-btn" id="logoutBtn">🚪 Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <header class="topbar">
+      <h2 class="topbar-title" id="topbarTitle">Accueil</h2>
+      <span class="topbar-date" id="topbarDate"></span>
+    </header>
+
+    <div class="content">
+
+      <!-- ACCUEIL -->
+      <section class="panel active" id="panel-accueil">
+        <div class="welcome-banner">
+          <div class="wb-text">
+            <h3>Bienvenue, <span id="welcomeName">Étudiant</span> 👋</h3>
+            <p>EST Salé · <span id="welcomeDate"></span></p>
+          </div>
+          <div class="wb-icon">🎓</div>
+        </div>
+        <div class="stats-strip">
+          <div class="stat-mini"><span class="sm-icon">📁</span><div><div class="sm-val" id="nbFiles">—</div><div class="sm-lbl">Fichiers dispo.</div></div></div>
+          <div class="stat-mini"><span class="sm-icon">📚</span><div><div class="sm-val" id="nbModules">—</div><div class="sm-lbl">Modules</div></div></div>
+          <div class="stat-mini"><span class="sm-icon">📅</span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances / sem.</div></div></div>
+        </div>
+        <div class="section-head"><h3 class="section-title">Fichiers récents</h3><a href="#" class="link-more" data-panel="cours">Voir tout →</a></div>
+        <div class="cards-grid" id="recentGrid"></div>
+      </section>
+
+      <!-- COURS -->
+      <section class="panel" id="panel-cours">
+        <div class="section-head"><h3 class="section-title">Cours &amp; Fichiers</h3></div>
+        <div class="filter-bar">
+          <button class="filter-btn active" data-cat="">Tous</button>
+          <button class="filter-btn" data-cat="cours">📖 Cours</button>
+          <button class="filter-btn" data-cat="td">✏️ TD</button>
+          <button class="filter-btn" data-cat="tp">🔬 TP</button>
+          <button class="filter-btn" data-cat="examen">📝 Examens</button>
+        </div>
+        <div class="cards-grid" id="allFilesGrid"></div>
+      </section>
+
+      <!-- NOTES -->
+      <section class="panel" id="panel-notes">
+        <div class="section-head">
+          <h3 class="section-title">Mes notes</h3>
+          <div class="topbar-actions">
+            <select class="select-sm" id="semSelect">
+              <option value="1">Semestre 1</option><option value="2">Semestre 2</option>
+              <option value="3">Semestre 3</option><option value="4">Semestre 4</option>
+              <option value="5">Semestre 5</option><option value="6">Semestre 6</option>
+            </select>
+            <button class="btn btn-gold btn-sm" id="loadNotesBtn">Afficher</button>
+          </div>
+        </div>
+        <div id="notesContent"></div>
+      </section>
+
+      <!-- EMPLOI DU TEMPS -->
+      <section class="panel" id="panel-emploi">
+        <div class="section-head">
+          <h3 class="section-title">Emploi du temps</h3>
+          <button class="btn btn-outline btn-sm" id="refreshEmploiBtn">↻ Actualiser</button>
+        </div>
+        <div id="emploiContent"></div>
+      </section>
+
+      <!-- RELEVÉ -->
+      <section class="panel" id="panel-releve">
+        <div class="section-head"><h3 class="section-title">Demande de relevé de notes</h3></div>
+        <div class="form-card">
+          <p class="form-card-desc">Sélectionnez le semestre pour lequel vous souhaitez un relevé de notes officiel.</p>
+          <div class="form-group">
+            <label>Semestre</label>
+            <select class="select-sm" id="releveSelect" style="width:100%">
+              <option value="1">Semestre 1</option><option value="2">Semestre 2</option>
+              <option value="3">Semestre 3</option><option value="4">Semestre 4</option>
+              <option value="5">Semestre 5</option><option value="6">Semestre 6</option>
+            </select>
+          </div>
+          <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.75rem;margin-top:.5rem">Envoyer la demande</button>
+          <div id="releveResult" style="margin-top:1rem"></div>
+        </div>
+      </section>
+
+      <!-- CLASSEMENT -->
+      <section class="panel" id="panel-classement">
+        <div class="section-head"><h3 class="section-title">Mon classement</h3></div>
+        <div id="classementContent"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

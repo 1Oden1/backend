@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ENT Salé — Espace Enseignant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-icon">🎓</div>
+        <div class="brand-text">
+          <span class="brand-sup">ENT Salé</span>
+          <span class="brand-name">Espace Enseignant</span>
+        </div>
+      </div>
+      <div class="user-chip">
+        <div class="avatar" id="avatarEl">E</div>
+        <div class="user-info">
+          <span class="user-name" id="userNameEl">Enseignant</span>
+          <span class="user-role">Enseignant · EST Salé</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-list">
+      <div class="nav-group">
+        <span class="nav-label">Mon espace</span>
+        <a class="nav-item active" data-panel="accueil"     href="#"><span class="nav-icon">🏠</span>Tableau de bord</a>
+        <a class="nav-item"        data-panel="upload"      href="#"><span class="nav-icon">📤</span>Déposer un fichier</a>
+        <a class="nav-item"        data-panel="mesfichiers" href="#"><span class="nav-icon">📁</span>Mes fichiers</a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Pédagogie</span>
+        <a class="nav-item" data-panel="emploi"     href="#"><span class="nav-icon">📅</span>Mon planning</a>
+        <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon">🏆</span>Classements filière</a>
+        <a class="nav-item" data-panel="releve"     href="#"><span class="nav-icon">📄</span>Relevés</a>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="logout-btn" id="logoutBtn">🚪 Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <header class="topbar">
+      <h2 class="topbar-title" id="topbarTitle">Tableau de bord</h2>
+      <span class="topbar-date" id="topbarDate"></span>
+    </header>
+
+    <div class="content">
+
+      <!-- ACCUEIL -->
+      <section class="panel active" id="panel-accueil">
+        <div class="welcome-banner">
+          <div class="wb-text">
+            <h3>Bonjour, Prof. <span id="welcomeName">Enseignant</span> 👨‍🏫</h3>
+            <p>Gérez vos cours, consultez les plannings et suivez vos étudiants.</p>
+          </div>
+          <div class="wb-icon">📚</div>
+        </div>
+        <div class="stats-strip">
+          <div class="stat-mini"><span class="sm-icon">📁</span><div><div class="sm-val" id="nbMesFichiers">—</div><div class="sm-lbl">Mes fichiers</div></div></div>
+          <div class="stat-mini"><span class="sm-icon">📅</span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances</div></div></div>
+          <div class="stat-mini"><span class="sm-icon">👥</span><div><div class="sm-val" id="nbFilières">—</div><div class="sm-lbl">Filières</div></div></div>
+        </div>
+        <div class="section-head"><h3 class="section-title">Mes derniers fichiers déposés</h3><a href="#" class="link-more" data-panel="upload">+ Déposer →</a></div>
+        <div class="cards-grid" id="accueilGrid"></div>
+      </section>
+
+      <!-- UPLOAD -->
+      <section class="panel" id="panel-upload">
+        <div class="section-head"><h3 class="section-title">Déposer un fichier pédagogique</h3></div>
+        <div class="upload-card">
+          <div class="dropzone" id="dropzone">
+            <div class="dz-icon">📤</div>
+            <div class="dz-text">Cliquez ou glissez votre fichier ici</div>
+            <div class="dz-sub">PDF, DOCX, PPTX, ZIP · Maximum 50 Mo</div>
+            <div class="dz-selected" id="dzSelected"></div>
+          </div>
+          <input type="file" id="fileInput" style="display:none"
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.txt,.py,.java,.c,.cpp"/>
+
+          <div class="upload-form">
+            <div class="form-grid">
+              <div class="form-group full"><label>Titre *</label><input type="text" id="fTitle" placeholder="ex: Cours Introduction aux Réseaux"/></div>
+              <div class="form-group"><label>Catégorie *</label>
+                <select id="fCategory">
+                  <option value="cours">📖 Cours</option>
+                  <option value="td">✏️ TD</option>
+                  <option value="tp">🔬 TP</option>
+                  <option value="examen">📝 Examen</option>
+                  <option value="autre">📄 Autre</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Module *</label><input type="text" id="fModule" placeholder="ex: Réseaux Informatiques"/></div>
+              <div class="form-group full"><label>Description</label><textarea id="fDesc" rows="3" placeholder="Description optionnelle…"></textarea></div>
+              <div class="form-group"><label>Visibilité</label>
+                <select id="fPublic">
+                  <option value="true">🌐 Public</option>
+                  <option value="false">🔒 Privé</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+              <div class="progress-label" id="progressLabel">Envoi en cours…</div>
+            </div>
+
+            <div id="uploadAlert"></div>
+            <button class="btn btn-gold upload-submit" id="submitUploadBtn">📤 Déposer le fichier</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- MES FICHIERS -->
+      <section class="panel" id="panel-mesfichiers">
+        <div class="section-head">
+          <h3 class="section-title">Mes fichiers déposés</h3>
+          <button class="btn btn-outline btn-sm" id="refreshMesBtn">↻ Actualiser</button>
+        </div>
+        <div class="cards-grid" id="mesFichiersGrid"></div>
+      </section>
+
+      <!-- EMPLOI DU TEMPS -->
+      <section class="panel" id="panel-emploi">
+        <div class="section-head">
+          <h3 class="section-title">Mon planning</h3>
+          <button class="btn btn-outline btn-sm" id="refreshEmploiBtn">↻ Actualiser</button>
+        </div>
+        <div id="emploiContent"></div>
+      </section>
+
+      <!-- CLASSEMENTS -->
+      <section class="panel" id="panel-classement">
+        <div class="section-head"><h3 class="section-title">Classements — Filière / Département</h3></div>
+        <div class="form-card" style="margin-bottom:1.5rem">
+          <div class="form-grid">
+            <div class="form-group"><label>ID Filière</label><input type="number" id="clFiliere" placeholder="1" min="1"/></div>
+            <div class="form-group"><label>ID Semestre</label><input type="number" id="clSemestre" placeholder="1" min="1"/></div>
+          </div>
+          <button class="btn btn-gold" id="loadClassBtn" style="width:100%;padding:.72rem;margin-top:.5rem">Voir le classement</button>
+        </div>
+        <div id="classementContent"></div>
+      </section>
+
+      <!-- RELEVÉS -->
+      <section class="panel" id="panel-releve">
+        <div class="section-head"><h3 class="section-title">Demander un relevé</h3></div>
+        <div class="form-card">
+          <p class="form-card-desc">Saisissez le semestre pour soumettre une demande de relevé.</p>
+          <div class="form-group"><label>Semestre ID</label><input type="number" id="rSemestre" placeholder="1" min="1"/></div>
+          <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.72rem;margin-top:.5rem">Envoyer la demande</button>
+          <div id="releveResult" style="margin-top:1rem"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

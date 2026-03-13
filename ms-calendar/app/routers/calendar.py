@@ -500,26 +500,26 @@ internal_router = APIRouter(prefix="/internal", tags=["Internal"], include_in_sc
 
 
 @internal_router.get("/departements")
-def internal_list_departements(db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_list_departements(db: Session = Depends(get_db)):
     rows = db.scalars(select(Departement).order_by(Departement.nom)).all()
     return [{"id": d.id, "nom": d.nom} for d in rows]
 
 
 @internal_router.get("/departements/{dept_id}")
-def internal_get_departement(dept_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_get_departement(dept_id: int, db: Session = Depends(get_db)):
     obj = db.get(Departement, dept_id)
     if not obj: raise HTTPException(404, "Département introuvable")
     return {"id": obj.id, "nom": obj.nom}
 
 
 @internal_router.get("/filieres")
-def internal_list_filieres(db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_list_filieres(db: Session = Depends(get_db)):
     rows = db.scalars(select(Filiere).order_by(Filiere.nom)).all()
     return [{"id": f.id, "nom": f.nom, "departement_id": f.departement_id} for f in rows]
 
 
 @internal_router.get("/filieres/{filiere_id}")
-def internal_get_filiere(filiere_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_get_filiere(filiere_id: int, db: Session = Depends(get_db)):
     obj = db.get(Filiere, filiere_id)
     if not obj: raise HTTPException(404, "Filière introuvable")
     return {
@@ -531,13 +531,13 @@ def internal_get_filiere(filiere_id: int, db: Session = Depends(get_db), _=Depen
 
 
 @internal_router.get("/departements/{dept_id}/filieres")
-def internal_filieres_by_dept(dept_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_filieres_by_dept(dept_id: int, db: Session = Depends(get_db)):
     rows = db.query(Filiere).filter(Filiere.departement_id == dept_id).all()
     return [{"id": f.id, "nom": f.nom} for f in rows]
 
 
 @internal_router.get("/semestres/{semestre_id}")
-def internal_get_semestre(semestre_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_get_semestre(semestre_id: int, db: Session = Depends(get_db)):
     obj = (
         db.query(Semestre)
         .options(
@@ -582,7 +582,7 @@ def internal_get_semestre(semestre_id: int, db: Session = Depends(get_db), _=Dep
 
 
 @internal_router.get("/elements/{element_id}")
-def internal_get_element(element_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def internal_get_element(element_id: int, db: Session = Depends(get_db)):
     obj = db.get(ElementModule, element_id)
     if not obj: raise HTTPException(404, "Élément introuvable")
     return {
@@ -602,7 +602,6 @@ def internal_get_element(element_id: int, db: Session = Depends(get_db), _=Depen
 def internal_semestres_deadline(
     date_limite: str = Query(..., description="Date au format YYYY-MM-DD"),
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
 ):
     from datetime import date as date_type
     try:

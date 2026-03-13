@@ -117,6 +117,12 @@ async def proxy_list_salles(request: Request, _=Depends(get_current_user)):
     return await _proxy("GET", "/salles", _token(request))
 
 
+
+
+@router.get("/annees",                                 summary="[Proxy] Lister les années universitaires")
+async def proxy_list_annees(request: Request, _=Depends(get_current_user)):
+    return await _proxy("GET", "/annees", _token(request))
+
 @router.get("/emploi-du-temps/{semestre_id}",          summary="[Proxy] Emploi du temps d'un semestre")
 async def proxy_emploi_du_temps(semestre_id: int, request: Request, _=Depends(get_current_user)):
     return await _proxy("GET", f"/emploi-du-temps/{semestre_id}", _token(request))
@@ -125,6 +131,18 @@ async def proxy_emploi_du_temps(semestre_id: int, request: Request, _=Depends(ge
 # ══════════════════════════════════════════════════════════════════════════════
 # ÉCRITURE (POST / PUT / DELETE) — rôle admin requis
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+# ── Années universitaires ─────────────────────────────────────────────────────
+
+@router.post("/annees",                  status_code=201, summary="[Proxy] Créer une année universitaire")
+async def proxy_create_annee(request: Request, _=Depends(require_admin)):
+    return await _proxy("POST", "/annees", _token(request), await request.json())
+
+@router.delete("/annees/{annee_id}",     status_code=204, summary="[Proxy] Supprimer une année universitaire")
+async def proxy_delete_annee(annee_id: int, request: Request, _=Depends(require_admin)):
+    return await _proxy("DELETE", f"/annees/{annee_id}", _token(request))
+
 
 # ── Départements ──────────────────────────────────────────────────────────────
 

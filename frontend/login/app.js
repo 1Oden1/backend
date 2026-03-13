@@ -14,14 +14,27 @@ const eyeIcon       = document.getElementById('eyeIcon');
 const errorBox      = document.getElementById('errorBox');
 const errorText     = document.getElementById('errorText');
 
-// ── Auto-redirect si déjà connecté ──────────────────────────────────────────
+// ── Auto-redirect si déjà connecté (token valide uniquement) ─────────────────
 (function checkExistingSession() {
-  const token = localStorage.getItem('access_token');
-  const user  = localStorage.getItem('user');
+  const token     = localStorage.getItem('access_token');
+  const user      = localStorage.getItem('user');
+  const ts        = parseInt(localStorage.getItem('token_ts') || '0');
+  const expiresIn = parseInt(localStorage.getItem('expires_in') || '0');
   if (!token || !user) return;
+
+  // Si le token est clairement expiré, nettoyer et rester sur login
+  const elapsed = (Date.now() - ts) / 1000;
+  if (expiresIn > 0 && elapsed > expiresIn) {
+    localStorage.clear();
+    return;
+  }
+
   try {
-    redirect(JSON.parse(user).roles || []);
-  } catch { /* ignore */ }
+    const u     = JSON.parse(user);
+    // Keycloak peut retourner les rôles sous différents noms
+    const roles = u.roles || u.realm_roles || u.groups || [];
+    if (roles.length > 0) redirect(roles);
+  } catch { localStorage.clear(); }
 })();
 
 // ── Toggle affichage mot de passe ────────────────────────────────────────────

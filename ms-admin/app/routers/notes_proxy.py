@@ -100,6 +100,16 @@ async def proxy_delete_note(note_id: int, request: Request, _=Depends(require_ad
     return await _proxy("DELETE", f"/admin/notes/{note_id}", _token(request))
 
 
+
+
+# ── Complétude & Publication ───────────────────────────────────────────────────
+
+@router.get("/admin/semestres/{semestre_id}/filieres/{filiere_id}/completude",
+             summary="[Proxy] Vérifier la complétude des notes")
+async def proxy_check_completude(semestre_id: int, filiere_id: int, request: Request, _=Depends(require_admin)):
+    return await _proxy("GET", f"/admin/semestres/{semestre_id}/filieres/{filiere_id}/completude",
+                        _token(request))
+
 @router.post("/admin/semestres/{semestre_id}/filieres/{filiere_id}/publier",
              status_code=202, summary="[Proxy] Publier les notes d'un semestre")
 async def proxy_publier_notes(semestre_id: int, filiere_id: int, request: Request, _=Depends(require_admin)):

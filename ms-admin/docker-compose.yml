@@ -28,21 +28,30 @@ services:
       KEYCLOAK_CLIENT_ID:      ent-backend
       KEYCLOAK_CLIENT_SECRET:  change-me-in-production
       JWT_ALGORITHM:           RS256
-      MS_MESSAGING_URL:        http://ent_ms_messaging:8000
+      # URLs des microservices (proxy HTTP)
+      MS_CALENDAR_URL:     http://ent_ms_calendar:8000
+      MS_NOTES_URL:        http://ent_ms_notes:8000
+      MS_MESSAGING_URL:    http://ent_ms_messaging:8000
     ports:
       - "8006:8000"
     volumes:
       - .:/app
     networks:
-      - ms-auth_default     # accès ent_mysql + ent_keycloak
-      - ms-upload_default   # accès ent_cassandra + minio
-      - ent_rabbitmq_net    # accès ent_ms_messaging
+      - ms-auth_default      # ✅ ent_keycloak + ent_mysql
+      - ms-upload_default    # ✅ ent_cassandra + minio
+      - ms-calendar_default  # ✅ ent_ms_calendar  ← MANQUAIT
+      - ms-notes_default     # ✅ ent_ms_notes     ← MANQUAIT
+      - ent_rabbitmq_net     # ✅ ent_ms_messaging
       - default
 
 networks:
   ms-auth_default:
     external: true
   ms-upload_default:
+    external: true
+  ms-calendar_default:    # ← MANQUAIT
+    external: true
+  ms-notes_default:       # ← MANQUAIT
     external: true
   ent_rabbitmq_net:
     external: true

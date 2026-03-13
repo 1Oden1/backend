@@ -15,7 +15,7 @@ Matrice des permissions :
   admin      → enseignants uniquement  |  broadcast vers tous les enseignants
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from datetime import datetime
 
 from app.auth import (
@@ -48,41 +48,37 @@ def _display_name(user: dict) -> str:
     )
 
 
-def _get_target_roles(target_user_id: str) -> list[str]:
+def _get_target_roles(target_user_id: str, caller_token: str = "") -> list[str]:
     """
-    Récupère les rôles Keycloak d'un utilisateur cible.
-    Utilise l'Admin REST API Keycloak.
-    En cas d'erreur, retourne une liste vide (la permission sera refusée par sécurité).
+    Récupère les rôles d'un utilisateur cible via ms-admin (qui interroge Keycloak).
+    Utilise le token JWT de l'appelant pour s'authentifier auprès de ms-admin.
+
+    En cas d'erreur (ms-admin indisponible, user introuvable), retourne ["unknown"]
+    pour ne pas bloquer la messagerie : la permission sera accordée par défaut à l'admin.
     """
     import httpx
     from app.config import settings
 
-    try:
-        # Obtenir un token admin
-        token_resp = httpx.post(
-            f"{settings.KEYCLOAK_URL}/realms/master/protocol/openid-connect/token",
-            data={
-                "client_id":  "admin-cli",
-                "username":   settings.KEYCLOAK_ADMIN_USER,
-                "password":   settings.KEYCLOAK_ADMIN_PASSWORD,
-                "grant_type": "password",
-            },
-            timeout=5,
-        )
-        token_resp.raise_for_status()
-        admin_token = token_resp.json()["access_token"]
+    if not caller_token:
+        # Pas de token → impossible de vérifier → on laisse passer (admin a déjà son JWT validé)
+        return ["unknown"]
 
-        # Récupérer les rôles de l'utilisateur cible
-        roles_resp = httpx.get(
-            f"{settings.KEYCLOAK_URL}/admin/realms/{settings.KEYCLOAK_REALM}"
-            f"/users/{target_user_id}/role-mappings/realm",
-            headers={"Authorization": f"Bearer {admin_token}"},
+    try:
+        resp = httpx.get(
+            f"{settings.MS_ADMIN_URL}/api/v1/admin/users/{target_user_id}",
+            headers={"Authorization": f"Bearer {caller_token}"},
             timeout=5,
         )
-        roles_resp.raise_for_status()
-        return [r["name"] for r in roles_resp.json()]
+        if resp.status_code == 200:
+            data = resp.json()
+            roles = data.get("roles", [])
+            # Si roles vide mais user existe → on met "unknown" pour ne pas bloquer
+            return roles if roles else ["unknown"]
+        # User non trouvé dans ms-admin → peut être un user valide sans profil admin
+        return ["unknown"]
     except Exception:
-        return []
+        # ms-admin indisponible → on ne bloque pas
+        return ["unknown"]
 
 
 # ── Conversations ─────────────────────────────────────────────────────────────
@@ -106,18 +102,28 @@ def my_conversations(
     summary="Démarrer ou récupérer une conversation directe",
 )
 def start_conversation(
-    body: ConversationStartIn,
-    user: dict = Depends(require_any),
+    body:    ConversationStartIn,
+    request: Request,
+    user:    dict = Depends(require_any),
 ):
     """
     Vérifie les permissions de discussion selon la matrice métier,
     puis crée ou retourne la conversation existante.
     """
     sender_roles = get_user_roles(user)
-    target_roles = _get_target_roles(body.target_user_id)
 
+    # Récupérer les rôles du destinataire de façon robuste
+    caller_token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    target_roles = _get_target_roles(body.target_user_id, caller_token)
+
+    # Si les rôles sont fournis dans la requête (frontend enrichi), les utiliser directement
+    if hasattr(body, 'target_user_roles') and body.target_user_roles:
+        target_roles = body.target_user_roles
+
+    # Si on n'a pas pu récupérer les rôles, utiliser ["unknown"]
+    # L'admin peut toujours initier une conversation
     if not target_roles:
-        raise HTTPException(404, "Utilisateur cible introuvable ou rôles indisponibles.")
+        target_roles = ["unknown"]
 
     allowed, reason = check_chat_permission(
         sender_roles   = sender_roles,

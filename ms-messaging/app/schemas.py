@@ -117,8 +117,9 @@ class MessageListResponse(BaseModel):
 
 class ConversationStartIn(BaseModel):
     """Démarrer ou récupérer une conversation directe avec un autre utilisateur."""
-    target_user_id:   str = Field(..., description="user_id Keycloak du destinataire")
-    target_user_name: str = Field(..., description="Nom affiché du destinataire")
+    target_user_id:    str       = Field(..., description="user_id Keycloak du destinataire")
+    target_user_name:  str       = Field(..., description="Nom affiché du destinataire")
+    target_user_roles: List[str] = Field(default=[], description="Rôles pré-récupérés par le frontend")
 
 
 class ConversationRead(BaseModel):

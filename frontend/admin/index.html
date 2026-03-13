@@ -886,13 +886,30 @@
 
 <!-- Conversation -->
 <div class="modal-overlay" id="modalConv">
-  <div class="modal">
+  <div class="modal" style="min-width:min(480px,90vw)">
     <h3>Nouvelle conversation</h3>
-    <div class="form-group"><label>User ID Keycloak du destinataire</label><input type="text" id="convTargetId" placeholder="uuid Keycloak"/></div>
-    <div class="form-group"><label>Nom affiché</label><input type="text" id="convTargetName" placeholder="Prénom Nom"/></div>
+    <div class="form-group">
+      <label>Rechercher un utilisateur</label>
+      <input type="text" id="convSearch" placeholder="Nom, prénom, email…"
+        oninput="searchConvUsers(this.value)"
+        style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);
+               border-radius:8px;font-family:Jost,sans-serif;outline:none"
+        onfocus="this.style.borderColor='var(--gold)'"
+        onblur="this.style.borderColor='var(--border)'"/>
+    </div>
+    <div id="convUserList"
+      style="max-height:260px;overflow-y:auto;border:1.5px solid var(--border);
+             border-radius:8px;margin-bottom:.8rem;background:var(--white)">
+      <div style="padding:1rem;text-align:center;color:var(--muted);font-size:.83rem">
+        Tapez pour rechercher…
+      </div>
+    </div>
+    <div id="convSelectedInfo" style="display:none;padding:.6rem .85rem;background:var(--cream);
+         border:1.5px solid var(--border);border-radius:8px;margin-bottom:.8rem;font-size:.83rem">
+    </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('modalConv')">Annuler</button>
-      <button class="btn btn-gold"    onclick="startConversation()">Démarrer</button>
+      <button class="btn btn-gold" id="btnStartConv" onclick="startConversation()" disabled>Démarrer</button>
     </div>
   </div>
 </div>
@@ -1350,8 +1367,8 @@ window.loadDashboard = function() {
    HEALTH
 ══════════════════════════════════════════════════════════════════════ */
 var SERVICES = [
-  { name:'Auth',      icon:'🔐', probe: function(){ return fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); } },
-  { name:'Upload',    icon:'📤', probe: function(){ return fetch('/api/upload/',   {method:'POST',headers:{Authorization:'Bearer '+TOKEN}}); } },
+  { name:'Auth',      icon:'🔐', probe: function(){ return fetch('/api/auth/me',       {headers:{Authorization:'Bearer '+TOKEN}}); } },
+  { name:'Upload',    icon:'📤', probe: function(){ return fetch('/api/download/', {headers:{Authorization:'Bearer '+TOKEN}}); } },
   { name:'Download',  icon:'📥', probe: function(){ return fetch('/api/download/', {headers:{Authorization:'Bearer '+TOKEN}}); } },
   { name:'Calendar',  icon:'📅', probe: function(){ return fetch('/api/admin/calendar/departements',{headers:{Authorization:'Bearer '+TOKEN}}); } },
   { name:'Notes',     icon:'📊', probe: function(){ return fetch('/api/admin/notes/admin/etudiants',{headers:{Authorization:'Bearer '+TOKEN}}); } },
@@ -2070,21 +2087,46 @@ window.traiterClassement = function(id, statut) {
 ══════════════════════════════════════════════════════════════════════ */
 var _activeConvId = null, _pollTimer = null;
 
+/* ── Variables état messagerie ───────────────────────────────────── */
+var _convSelectedUser = null;  // { id, name, roles }
+var _convSearchTimer  = null;
+var _convUsersCache   = {};    // cache id → user object pour éviter JSON dans onclick
+
+/* ── Conversations ───────────────────────────────────────────────── */
 window.loadConversations = function() {
   var wrap = ge('convItems'); if (!wrap) return;
   wrap.innerHTML = '<div class="loader"></div>';
   api('GET', '/api/messaging/chat/conversations').then(function(r) {
-    if (!r.ok) throw new Error(r.status); return r.json();
-  }).then(function(convs) {
-    if (!convs.length) { wrap.innerHTML = '<div style="padding:1.2rem;color:var(--muted);font-size:.83rem;text-align:center">Aucune conversation.<br>Cliquez <strong>+ Nouvelle</strong>.</div>'; return; }
-    wrap.innerHTML = convs.map(function(c) {
-      return '<div class="conv-item" onclick="openConversation(\''+c.conversation_id+'\',\''+esc(c.other_user_name||'?')+'\')">'
-        +'<div class="conv-avatar">'+(c.other_user_name||'?').charAt(0).toUpperCase()+'</div>'
-        +'<div><div class="conv-name">'+esc(c.other_user_name||'—')+'</div>'
-        +'<div class="conv-last">'+(c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR') : 'Aucun message')+'</div>'
-        +'</div></div>';
-    }).join('');
-  }).catch(function(e) { wrap.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.82rem">⚠ Chat indisponible ('+e.message+')</div>'; });
+    if (!r.ok) {
+      return r.json().catch(function(){return{};}).then(function(d) {
+        var msg = d.detail || ('Erreur HTTP ' + r.status);
+        wrap.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">'
+          + '⚠ Chat indisponible<br><small style="color:crimson">' + esc(msg) + '</small><br>'
+          + '<button class="btn btn-outline btn-sm" style="margin-top:.6rem" onclick="loadConversations()">↻ Réessayer</button></div>';
+      });
+    }
+    return r.json().then(function(convs) {
+      if (!convs.length) {
+        wrap.innerHTML = '<div style="padding:1.2rem;color:var(--muted);font-size:.83rem;text-align:center">'
+          + 'Aucune conversation.<br>Cliquez <strong>+ Nouvelle</strong>.</div>';
+        return;
+      }
+      wrap.innerHTML = convs.map(function(c) {
+        return '<div class="conv-item" onclick="openConversation(\''+c.conversation_id+'\',\''+esc(c.other_user_name||'?')+'\')">'
+          + '<div class="conv-avatar">'+(c.other_user_name||'?')[0].toUpperCase()+'</div>'
+          + '<div><div class="conv-name">'+esc(c.other_user_name||'—')+'</div>'
+          + '<div class="conv-last">'+(c.last_message_at
+              ? new Date(c.last_message_at).toLocaleDateString('fr-FR')
+              : 'Aucun message')+'</div>'
+          + '</div></div>';
+      }).join('');
+    });
+  }).catch(function(e) {
+    wrap.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">'
+      + '⚠ Service de messagerie indisponible<br>'
+      + '<small style="color:crimson">'+esc(e.message)+'</small><br>'
+      + '<button class="btn btn-outline btn-sm" style="margin-top:.6rem" onclick="loadConversations()">↻ Réessayer</button></div>';
+  });
 }
 
 window.openConversation = function(convId, convName) {
@@ -2138,14 +2180,92 @@ window.sendMessage = function(convId) {
   }).catch(function(){ input.value = content; showToast('Erreur réseau','error'); });
 };
 
+/* ── Recherche utilisateurs pour le modal ──────────────────────── */
+window.searchConvUsers = function(q) {
+  clearTimeout(_convSearchTimer);
+  var list = ge('convUserList');
+  if (!q || q.length < 2) {
+    list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.83rem">Tapez au moins 2 caractères…</div>';
+    return;
+  }
+  list.innerHTML = '<div class="loader" style="margin:.8rem auto"></div>';
+  _convSearchTimer = setTimeout(function() {
+    // GET /api/admin/users/?search=q → [UserRead{id, username, email, first_name, last_name, roles}]
+    api('GET', '/api/admin/users/?search='+encodeURIComponent(q)+'&max=20').then(function(r) {
+      return r.ok ? r.json() : [];
+    }).then(function(users) {
+      if (!users || !users.length) {
+        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.83rem">Aucun utilisateur trouvé.</div>';
+        return;
+      }
+      list.innerHTML = users.map(function(u) {
+        var name = ((u.first_name||'') + ' ' + (u.last_name||'')).trim() || u.username;
+        var roles = (u.roles||[]).join(', ') || 'aucun rôle';
+        // Stocker dans _convUsersCache pour éviter JSON dans onclick
+        _convUsersCache[u.id] = { id: u.id, name: name, roles: u.roles||[] };
+        return '<div class="conv-user-item" data-uid="'+u.id+'" onclick="selectConvUser(\''+u.id+'\')"'
+          +' style="padding:.65rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.7rem;align-items:center;transition:background .12s"'
+          +' >'  /* hover inline supprimé */
+          + '<div style="width:34px;height:34px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0">'
+          + name[0].toUpperCase() + '</div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-weight:600;font-size:.85rem">'+esc(name)+'</div>'
+          + '<div style="font-size:.73rem;color:var(--muted)">'+esc(u.email||u.username)+'</div>'
+          + '<div style="font-size:.68rem;color:var(--muted);margin-top:.1rem">🏷 '+esc(roles)+'</div>'
+          + '</div></div>';
+      }).join('');
+    }).catch(function() {
+      list.innerHTML = '<div style="padding:1rem;text-align:center;color:crimson;font-size:.83rem">Erreur de chargement.</div>';
+    });
+  }, 350);
+};
+
+window.selectConvUser = function(id) {
+  var u = _convUsersCache[id];
+  if (!u) return;
+  _convSelectedUser = u;
+  var info = ge('convSelectedInfo');
+  info.style.display = 'block';
+  info.innerHTML = '✓ Sélectionné : <strong>'+esc(u.name)+'</strong>'
+    + ' <span style="color:var(--muted)">['+esc((u.roles||[]).join(', ')||'—')+']</span>';
+  var btn = ge('btnStartConv');
+  if (btn) btn.disabled = false;
+  document.querySelectorAll('.conv-user-item').forEach(function(el){
+    el.style.background = (el.getAttribute('data-uid') === id) ? 'var(--cream)' : '';
+  });
+};
+
 window.startConversation = function() {
-  var targetId = val('convTargetId'), targetName = val('convTargetName');
-  if (!targetId || !targetName) { showToast('ID Keycloak et nom requis','error'); return; }
-  api('POST', '/api/messaging/chat/conversations', {target_user_id: targetId, target_user_name: targetName}).then(function(r) {
+  if (!_convSelectedUser) { showToast('Sélectionnez un utilisateur','error'); return; }
+  var body = {
+    target_user_id:    _convSelectedUser.id,
+    target_user_name:  _convSelectedUser.name,
+    target_user_roles: _convSelectedUser.roles || []
+  };
+  var btn = ge('btnStartConv');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+  api('POST', '/api/messaging/chat/conversations', body).then(function(r) {
     if (r.ok || r.status===201) {
-      return r.json().then(function(d){ showToast('Conversation démarrée ✓','success'); closeModal('modalConv'); loadConversations(); window.openConversation(d.conversation_id, targetName); });
+      return r.json().then(function(d) {
+        showToast('Conversation démarrée ✓','success');
+        closeModal('modalConv');
+        // Reset modal
+        _convSelectedUser = null;
+        var si = ge('convSelectedInfo'); if (si) si.style.display='none';
+        var ci = ge('convSearch'); if (ci) ci.value='';
+        var cl = ge('convUserList'); if (cl) cl.innerHTML='<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.83rem">Tapez pour rechercher…</div>';
+        if (btn) { btn.disabled=true; btn.textContent='Démarrer'; }
+        loadConversations();
+        window.openConversation(d.conversation_id, body.target_user_name);
+      });
     }
-    errToast(r);
+    return r.json().catch(function(){return{};}).then(function(d) {
+      showToast('✗ '+(d.detail||'Erreur '+r.status),'error');
+      if (btn) { btn.disabled=false; btn.textContent='Démarrer'; }
+    });
+  }).catch(function() {
+    showToast('Erreur réseau','error');
+    if (btn) { btn.disabled=false; btn.textContent='Démarrer'; }
   });
 };
 

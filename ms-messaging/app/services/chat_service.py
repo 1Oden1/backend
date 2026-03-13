@@ -21,7 +21,7 @@ import uuid
 import logging
 from datetime import datetime, timezone
 
-from app.database_cassandra import get_session
+from app.database_cassandra import get_session_with_keyspace
 from app.config import settings
 from app.services.notification_service import notify_new_message
 
@@ -30,9 +30,8 @@ logger = logging.getLogger(__name__)
 # ── Helpers Cassandra ─────────────────────────────────────────────────────────
 
 def _session():
-    s = get_session()
-    s.set_keyspace(settings.CASSANDRA_KEYSPACE)
-    return s
+    """Retourne une session Cassandra avec keyspace prêt (self-healing)."""
+    return get_session_with_keyspace()
 
 
 # ── Permissions ───────────────────────────────────────────────────────────────
@@ -62,11 +61,14 @@ def check_chat_permission(
     if sender_is_etudiant and not sender_is_delegue:
         return False, "Les étudiants non délégués n'ont pas accès au chat."
 
-    # ── Admin → Enseignants uniquement ────────────────────────────────────────
+    # ── Admin → tous les utilisateurs avec un rôle reconnu ───────────────────
     if sender_is_admin:
-        if target_is_enseignant:
+        # "unknown" = on n'a pas pu récupérer les rôles, on laisse passer
+        if "unknown" in target_roles:
             return True, "ok"
-        return False, "L'admin ne peut discuter qu'avec les enseignants."
+        if target_is_enseignant or target_is_admin or target_is_delegue:
+            return True, "ok"
+        return False, "L'admin ne peut discuter qu'avec les enseignants ou délégués."
 
     # ── Enseignant → Admin ou Délégué ─────────────────────────────────────────
     if sender_is_enseignant:

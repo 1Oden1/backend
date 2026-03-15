@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dateStr = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   document.getElementById('topbarDate').textContent  = dateStr;
   document.getElementById('welcomeDate').textContent = dateStr;
+  initChatPanel();  // affiche/masque le lien Chat selon le rôle délégué
 
   document.querySelectorAll('.nav-item').forEach(el =>
     el.addEventListener('click', e => { e.preventDefault(); switchPanel(el.dataset.panel, el); }));
@@ -46,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('active'); loadFiles(btn.dataset.cat);
     }));
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
-  document.getElementById('submitReleveBtn').addEventListener('click', demanderReleve);
+  const _rlBtn = document.getElementById('submitReleveBtn');
+  if (_rlBtn) _rlBtn.addEventListener('click', demanderReleve);
   loadAccueil();
 });
 
@@ -61,6 +63,8 @@ function switchPanel(id, navEl) {
   if (id === 'notes')      initNotesPanel();
   if (id === 'emploi')     initEmploiPanel();
   if (id === 'classement') showClassementForm();
+  if (id === 'notifs')     loadNotifs();
+  if (id === 'chat')       loadChatConversations();
 }
 
 /* ── ACCUEIL ──────────────────────────────────────────────────────── */
@@ -77,6 +81,55 @@ async function loadAccueil() {
     if (nbEl) nbEl.textContent = d.total || files.length;
     renderCards(files.slice(0, 6), grid);
   } catch { grid.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>'; }
+
+  // Stats modules + séances : uniquement la filière de l'étudiant connecté
+  // 1. GET /api/notes/etudiant/me → { calendar_filiere_id }
+  // 2. GET /api/calendar/filieres/{id}/semestres → liste des semestres
+  // 3. Pour chaque semestre : modules + emploi-du-temps
+  try {
+    const rMe = await api('GET', '/api/notes/etudiant/me');
+    if (!rMe.ok) throw new Error('profil introuvable');
+    const me = await rMe.json();
+    const filiereId = me.calendar_filiere_id;
+
+    const rSems = await api('GET', `/api/calendar/filieres/${filiereId}/semestres`);
+    const sems = rSems.ok ? (await rSems.json()) : [];
+
+    let totalModules = 0;
+    let totalSeances = 0;
+    for (const s of sems) {
+      const [rMod, rEdt] = await Promise.all([
+        api('GET', `/api/calendar/semestres/${s.id}/modules`),
+        api('GET', `/api/calendar/emploi-du-temps/${s.id}`)
+      ]);
+      if (rMod.ok) { const mods = await rMod.json(); totalModules += (mods||[]).length; }
+      if (rEdt.ok) { const edt  = await rEdt.json(); totalSeances += (edt.seances||[]).length; }
+    }
+
+    const nbMod = document.getElementById('nbModules');
+    const nbSea = document.getElementById('nbSeances');
+    if (nbMod) nbMod.textContent = totalModules || 0;
+    if (nbSea) nbSea.textContent = totalSeances || 0;
+  } catch {
+    // L'étudiant n'est peut-être pas encore enregistré dans ms-notes
+    const nbMod = document.getElementById('nbModules');
+    const nbSea = document.getElementById('nbSeances');
+    if (nbMod) nbMod.textContent = '—';
+    if (nbSea) nbSea.textContent = '—';
+  }
+
+  // Également déclencher les notifs en arrière-plan pour le badge
+  try {
+    const rN = await api('GET', '/api/messaging/notifications/?limit=50');
+    if (rN.ok) {
+      const dn = await rN.json();
+      const unread = (dn.notifications||[]).filter(n => !n.is_read).length;
+      const navNotif = document.querySelector('[data-panel="notifs"]');
+      if (navNotif && unread > 0) {
+        navNotif.innerHTML = `<span class="nav-icon">🔔</span>Notifications <span style="background:#C9A84C;color:#fff;border-radius:99px;font-size:.63rem;padding:.05rem .45rem;margin-left:.3rem">${unread}</span>`;
+      }
+    }
+  } catch {}
 }
 
 /* ── FICHIERS ─────────────────────────────────────────────────────── */
@@ -116,56 +169,58 @@ async function downloadFile(fileId) {
 }
 
 /* ── NOTES ─ Cascade Département → Filière → Semestre ─────────────── */
-function initNotesPanel() {
+async function initNotesPanel() {
   const wrap = document.getElementById('notesContent');
-  if (!wrap || document.getElementById('notesDeptSel')) return;
-  wrap.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:flex-end;margin-bottom:1.2rem;
-                padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Département</label>
-        <select id="notesDeptSel" onchange="notesOnDept()"
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Filière</label>
-        <select id="notesFiliereSel" onchange="notesOnFiliere()" disabled
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Semestre</label>
-        <select id="notesSemSel" disabled
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <button class="btn btn-gold" onclick="loadNotes()" style="padding:.45rem 1.1rem;height:36px">Afficher</button>
-    </div>
-    <div id="notesTableWrap"></div>`;
+  if (!wrap) return;
+  // Déjà initialisé ?
+  if (document.getElementById('notesSemSel')) return;
 
-  api('GET','/api/calendar/departements').then(r=>r.ok?r.json():[]).then(list=>{
-    const sel=document.getElementById('notesDeptSel');
-    (list||[]).forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.nom;sel.appendChild(o);});
-  });
+  wrap.innerHTML = '<div class="loader"></div>';
+
+  try {
+    // 1. Récupérer la filière de l'étudiant connecté
+    const rMe = await api('GET', '/api/notes/etudiant/me');
+    if (!rMe.ok) throw new Error('Profil introuvable — contactez l\'administration.');
+    const me = await rMe.json();
+
+    // 2. Récupérer les semestres de sa filière
+    const rSems = await api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`);
+    const sems = rSems.ok ? await rSems.json() : [];
+
+    // 3. Construire le sélecteur (un seul : Semestre)
+    wrap.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:flex-end;margin-bottom:1.2rem;
+                  padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem">
+            Filière : <strong style="color:var(--dark)">${escHtml(me.prenom)} ${escHtml(me.nom)} — filière #${me.calendar_filiere_id}</strong>
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+            <select id="notesSemSel"
+              style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:180px">
+              <option value="">— Choisir un semestre —</option>
+              ${(sems||[]).map(s=>`<option value="${s.id}">${escHtml(s.nom)}</option>`).join('')}
+            </select>
+            <button class="btn btn-gold" onclick="loadNotes()" style="padding:.45rem 1.1rem;height:36px">Afficher</button>
+          </div>
+        </div>
+      </div>
+      <div id="notesTableWrap"></div>`;
+
+    // Auto-afficher si un seul semestre
+    if ((sems||[]).length === 1) {
+      document.getElementById('notesSemSel').value = sems[0].id;
+      loadNotes();
+    }
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div>
+      <p>${escHtml(e.message)}</p></div>`;
+  }
 }
 
-window.notesOnDept = function() {
-  const dId=parseInt(document.getElementById('notesDeptSel').value);
-  const fSel=document.getElementById('notesFiliereSel'), sSel=document.getElementById('notesSemSel');
-  fSel.innerHTML='<option value="">— Choisir —</option>'; sSel.innerHTML='<option value="">— Choisir —</option>';
-  fSel.disabled=true; sSel.disabled=true;
-  if(isNaN(dId)) return;
-  api('GET',`/api/calendar/departements/${dId}/filieres`).then(r=>r.ok?r.json():[]).then(list=>{
-    fSel.disabled=false;
-    (list||[]).forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fSel.appendChild(o);});
-  });
-};
-window.notesOnFiliere = function() {
-  const fId=parseInt(document.getElementById('notesFiliereSel').value);
-  const sSel=document.getElementById('notesSemSel');
-  sSel.innerHTML='<option value="">— Choisir —</option>'; sSel.disabled=true;
-  if(isNaN(fId)) return;
-  api('GET',`/api/calendar/filieres/${fId}/semestres`).then(r=>r.ok?r.json():[]).then(list=>{
-    sSel.disabled=false;
-    (list||[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nom;sSel.appendChild(o);});
-    if((list||[]).length===1) sSel.value=list[0].id;
-  });
-};
+// Stubs supprimés (cascade dept/filière non nécessaire pour l'étudiant)
+window.notesOnDept    = function() {};
+window.notesOnFiliere = function() {};
 
 window.loadNotes = async function() {
   const semId=parseInt(document.getElementById('notesSemSel')?.value);
@@ -239,56 +294,53 @@ window.loadNotes = async function() {
 };
 
 /* ── EMPLOI DU TEMPS ─ Cascade puis GET /api/calendar/emploi-du-temps/{id} ── */
-function initEmploiPanel() {
-  const wrap=document.getElementById('emploiContent');
-  if(!wrap||document.getElementById('emploiDeptSel')) return;
-  wrap.innerHTML=`
-    <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:flex-end;margin-bottom:1.2rem;
-                padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Département</label>
-        <select id="emploiDeptSel" onchange="emploiOnDept()"
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Filière</label>
-        <select id="emploiFiliereSel" onchange="emploiOnFiliere()" disabled
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <div><label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Semestre</label>
-        <select id="emploiSemSel" disabled
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:150px">
-          <option value="">— Choisir —</option></select></div>
-      <button class="btn btn-gold" onclick="loadEmploi()" style="padding:.45rem 1.1rem;height:36px">Afficher</button>
-    </div>
-    <div id="emploiGrid"></div>`;
+async function initEmploiPanel() {
+  const wrap = document.getElementById('emploiContent');
+  if (!wrap) return;
+  if (document.getElementById('emploiSemSel')) return;
 
-  api('GET','/api/calendar/departements').then(r=>r.ok?r.json():[]).then(list=>{
-    const sel=document.getElementById('emploiDeptSel');
-    (list||[]).forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.nom;sel.appendChild(o);});
-  });
+  wrap.innerHTML = '<div class="loader"></div>';
+
+  try {
+    // Filière de l'étudiant → semestres directement
+    const rMe = await api('GET', '/api/notes/etudiant/me');
+    if (!rMe.ok) throw new Error('Profil introuvable — contactez l\'administration.');
+    const me = await rMe.json();
+
+    const rSems = await api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`);
+    const sems = rSems.ok ? await rSems.json() : [];
+
+    wrap.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:flex-end;margin-bottom:1.2rem;
+                  padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem">
+            Semestre à afficher
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+            <select id="emploiSemSel"
+              style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;min-width:180px">
+              <option value="">— Choisir un semestre —</option>
+              ${(sems||[]).map(s=>`<option value="${s.id}">${escHtml(s.nom)}</option>`).join('')}
+            </select>
+            <button class="btn btn-gold" onclick="loadEmploi()" style="padding:.45rem 1.1rem;height:36px">Afficher</button>
+          </div>
+        </div>
+      </div>
+      <div id="emploiGrid"></div>`;
+
+    // Auto-afficher si un seul semestre
+    if ((sems||[]).length === 1) {
+      document.getElementById('emploiSemSel').value = sems[0].id;
+      loadEmploi();
+    }
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><p>${escHtml(e.message)}</p></div>`;
+  }
 }
 
-window.emploiOnDept = function(){
-  const dId=parseInt(document.getElementById('emploiDeptSel').value);
-  const fSel=document.getElementById('emploiFiliereSel'),sSel=document.getElementById('emploiSemSel');
-  fSel.innerHTML='<option value="">— Choisir —</option>';sSel.innerHTML='<option value="">— Choisir —</option>';
-  fSel.disabled=true;sSel.disabled=true;
-  if(isNaN(dId)) return;
-  api('GET',`/api/calendar/departements/${dId}/filieres`).then(r=>r.ok?r.json():[]).then(list=>{
-    fSel.disabled=false;
-    (list||[]).forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fSel.appendChild(o);});
-  });
-};
-window.emploiOnFiliere = function(){
-  const fId=parseInt(document.getElementById('emploiFiliereSel').value);
-  const sSel=document.getElementById('emploiSemSel');
-  sSel.innerHTML='<option value="">— Choisir —</option>';sSel.disabled=true;
-  if(isNaN(fId)) return;
-  api('GET',`/api/calendar/filieres/${fId}/semestres`).then(r=>r.ok?r.json():[]).then(list=>{
-    sSel.disabled=false;
-    (list||[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nom;sSel.appendChild(o);});
-    if((list||[]).length===1) sSel.value=list[0].id;
-  });
-};
+window.emploiOnDept    = function(){};
+window.emploiOnFiliere = function(){};
 
 window.loadEmploi = async function(){
   const semId=parseInt(document.getElementById('emploiSemSel')?.value);
@@ -421,6 +473,24 @@ async function demanderReleve(){
   } catch{res.innerHTML='<div class="alert alert-err">✗ Erreur réseau.</div>';}
 }
 
+/* ── Peupler selects relevé/classement avec les semestres réels ─── */
+async function initSemestreSelects() {
+  try {
+    const rMe = await api('GET', '/api/notes/etudiant/me');
+    if (!rMe.ok) return;
+    const me = await rMe.json();
+    const rSems = await api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`);
+    if (!rSems.ok) return;
+    const sems = await rSems.json();
+    if (!sems || !sems.length) return;
+    const opts = sems.map(s => `<option value="${s.id}">${escHtml(s.nom)}</option>`).join('');
+    ['releveSelect'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) sel.innerHTML = opts;
+    });
+  } catch {}
+}
+
 /* ── UTILS ────────────────────────────────────────────────────────── */
 async function doLogout(){
   const rt=localStorage.getItem('refresh_token');
@@ -434,3 +504,230 @@ function showToast(msg,type=''){
   t.textContent=msg;t.className='toast show '+type;
   clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>{t.className='toast';},3200);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   NOTIFICATIONS
+══════════════════════════════════════════════════════════════════ */
+window.loadNotifs = async function() {
+  const wrap = document.getElementById('notifsList');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader"></div>';
+  try {
+    const r = await api('GET', '/api/messaging/notifications/');
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    const list = d.notifications || [];
+    if (!list.length) {
+      wrap.innerHTML = '<div class="empty"><div class="e-icon">🔔</div><p>Aucune notification.</p></div>';
+      return;
+    }
+    wrap.innerHTML = list.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead('${n.notification_id}','${n.created_at}',this)">
+        <div class="notif-dot ${n.is_read ? 'read' : ''}"></div>
+        <div>
+          <div class="notif-title">${escHtml(n.title || n.type)}</div>
+          <div class="notif-meta">${escHtml(n.content || '')}</div>
+          <div class="notif-meta" style="margin-top:.2rem;opacity:.7">${n.created_at ? new Date(n.created_at).toLocaleString('fr-FR') : ''}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><p>Notifications indisponibles (${escHtml(e.message)})</p></div>`;
+  }
+};
+
+window.markNotifRead = async function(id, createdAt, el) {
+  try {
+    await api('PUT', `/api/messaging/notifications/${id}/read?created_at_iso=${encodeURIComponent(createdAt)}`);
+    if (el) { el.classList.remove('unread'); el.querySelector('.notif-dot')?.classList.add('read'); }
+  } catch {}
+};
+
+window.markAllNotifsRead = async function() {
+  try {
+    await api('PUT', '/api/messaging/notifications/read-all');
+    showToast('Toutes les notifications marquées lues ✓', 'success');
+    loadNotifs();
+  } catch { showToast('Erreur','error'); }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   CHAT DÉLÉGUÉ  (visible seulement si role = delegue)
+══════════════════════════════════════════════════════════════════ */
+var _chatSelectedUser = null;
+var _chatUsersCache   = {};
+var _chatPollTimer    = null;
+var _activeChatConvId = null;
+var _chatSearchTimer  = null;
+
+function initChatPanel() {
+  // Afficher le nav item chat seulement si délégué
+  const isDelegue = (currentUser.roles || []).includes('delegue');
+  const chatNav = document.getElementById('chatNavItem');
+  if (chatNav) chatNav.style.display = isDelegue ? '' : 'none';
+  if (isDelegue) loadChatConversations();
+}
+
+window.loadChatConversations = async function() {
+  const wrap = document.getElementById('convItems');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader"></div>';
+  try {
+    const r = await api('GET', '/api/messaging/chat/conversations');
+    if (!r.ok) throw new Error(r.status);
+    const convs = await r.json();
+    if (!convs.length) {
+      wrap.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">Aucune conversation.<br>Cliquez <strong>+ Nouvelle</strong>.</div>';
+      return;
+    }
+    wrap.innerHTML = convs.map(c =>
+      `<div class="conv-item" onclick="openChatConv('${c.conversation_id}','${escHtml(c.other_user_name||'?')}')">
+        <div class="conv-avatar">${(c.other_user_name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div class="conv-name">${escHtml(c.other_user_name||'—')}</div>
+          <div class="conv-last">${c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR') : 'Aucun message'}</div>
+        </div>
+      </div>`
+    ).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">⚠ Chat indisponible<br><button class="btn btn-outline btn-sm" style="margin-top:.5rem" onclick="loadChatConversations()">↻ Réessayer</button></div>`;
+  }
+};
+
+window.openChatConv = function(convId, convName) {
+  _activeChatConvId = convId;
+  const area = document.getElementById('chatArea');
+  area.innerHTML =
+    `<div class="chat-header"><div class="conv-avatar" style="width:32px;height:32px;font-size:.85rem">${convName[0].toUpperCase()}</div><strong>${escHtml(convName)}</strong></div>`
+    + `<div id="msgsWrap"></div>`
+    + `<div class="chat-input-row"><input type="text" id="msgInput" placeholder="Écrire un message…"/><button class="btn btn-gold" onclick="sendChatMsg('${convId}')">Envoyer</button></div>`;
+  document.getElementById('msgInput').onkeydown = e => { if (e.key === 'Enter') sendChatMsg(convId); };
+  fetchChatMessages(convId);
+  clearInterval(_chatPollTimer);
+  _chatPollTimer = setInterval(() => fetchChatMessages(convId), 5000);
+};
+
+async function fetchChatMessages(convId) {
+  const wrap = document.getElementById('msgsWrap');
+  if (!wrap) { clearInterval(_chatPollTimer); return; }
+  try {
+    const r = await api('GET', `/api/messaging/chat/conversations/${convId}/messages`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const msgs = (d.messages || []).filter(m => !m.is_hidden);
+    const myId = currentUser.id || '';
+    const atBottom = (wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight) < 40;
+    if (!msgs.length) { wrap.innerHTML = '<div class="chat-empty-msgs">Aucun message. Dites bonjour !</div>'; return; }
+    wrap.innerHTML = msgs.map(m => {
+      const isMe = m.sender_id === myId;
+      return `<div class="msg ${isMe ? 'msg-me' : 'msg-other'}">
+        ${!isMe ? `<div class="msg-sender">${escHtml(m.sender_name)}</div>` : ''}
+        <div class="msg-bubble">${escHtml(m.content)}</div>
+        <div class="msg-time">${m.sent_at ? new Date(m.sent_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      </div>`;
+    }).join('');
+    if (atBottom) wrap.scrollTop = wrap.scrollHeight;
+  } catch {}
+}
+
+window.sendChatMsg = async function(convId) {
+  const input = document.getElementById('msgInput');
+  const content = input ? input.value.trim() : '';
+  if (!content) return;
+  input.value = '';
+  try {
+    const r = await api('POST', `/api/messaging/chat/conversations/${convId}/messages`, { content });
+    if (r.ok || r.status === 201) fetchChatMessages(convId);
+    else { input.value = content; showToast('Erreur envoi', 'error'); }
+  } catch { input.value = content; showToast('Erreur réseau', 'error'); }
+};
+
+/* ── Modal nouvelle conv (délégué → enseignant) ─────────────────── */
+window.openChatModal = function() {
+  _chatSelectedUser = null;
+  const btn = document.getElementById('btnStartChat');
+  if (btn) btn.disabled = true;
+  const list = document.getElementById('chatUserList');
+  if (list) list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Tapez pour chercher…</div>';
+  const inp = document.getElementById('chatSearchInput');
+  if (inp) inp.value = '';
+  document.getElementById('chatModalOverlay').style.display = 'flex';
+};
+
+window.closeChatModal = function() {
+  document.getElementById('chatModalOverlay').style.display = 'none';
+};
+
+window.chatSearchUsers = function(q) {
+  clearTimeout(_chatSearchTimer);
+  const list = document.getElementById('chatUserList');
+  if (!q || q.length < 2) {
+    list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Tapez au moins 2 caractères…</div>';
+    return;
+  }
+  list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
+  _chatSearchTimer = setTimeout(async () => {
+    try {
+      // Chercher uniquement les enseignants via ms-admin
+      const r = await api('GET', `/api/admin/users/?search=${encodeURIComponent(q)}&max=15`);
+      const users = r.ok ? await r.json() : [];
+      // Filtrer enseignants uniquement
+      const enseignants = (users || []).filter(u => (u.roles || []).includes('enseignant'));
+      if (!enseignants.length) {
+        list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun enseignant trouvé.</div>';
+        return;
+      }
+      _chatUsersCache = {};
+      list.innerHTML = enseignants.map(u => {
+        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
+        _chatUsersCache[u.id] = { id: u.id, name, roles: u.roles || [] };
+        return `<div onclick="selectChatUser('${u.id}')" data-uid="${u.id}"
+          style="padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--gold,#C9A84C);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">${escHtml(name)}</div>
+            <div style="font-size:.71rem;color:var(--muted)">${escHtml(u.email || u.username)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch {
+      list.innerHTML = '<div style="padding:.8rem;text-align:center;color:crimson;font-size:.82rem">Erreur de chargement.</div>';
+    }
+  }, 350);
+};
+
+window.selectChatUser = function(id) {
+  _chatSelectedUser = _chatUsersCache[id];
+  if (!_chatSelectedUser) return;
+  document.querySelectorAll('#chatUserList [data-uid]').forEach(el =>
+    el.style.background = el.dataset.uid === id ? 'var(--cream,#FAF8F2)' : ''
+  );
+  const btn = document.getElementById('btnStartChat');
+  if (btn) btn.disabled = false;
+};
+
+window.startChatConv = async function() {
+  if (!_chatSelectedUser) return;
+  const btn = document.getElementById('btnStartChat');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+  try {
+    const r = await api('POST', '/api/messaging/chat/conversations', {
+      target_user_id:    _chatSelectedUser.id,
+      target_user_name:  _chatSelectedUser.name,
+      target_user_roles: _chatSelectedUser.roles,
+    });
+    if (r.ok || r.status === 201) {
+      const d = await r.json();
+      closeChatModal();
+      loadChatConversations();
+      openChatConv(d.conversation_id, _chatSelectedUser.name);
+      showToast('Conversation démarrée ✓', 'success');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast('✗ ' + (d.detail || `Erreur ${r.status}`), 'error');
+    }
+  } catch { showToast('Erreur réseau', 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Démarrer'; } }
+};
+
+// Afficher le nav chat selon rôle — appelé après DOMContentLoaded dans le bloc principal
+// (initChatPanel est défini plus haut et appelé dans addEventListener DOMContentLoaded)

@@ -11,6 +11,40 @@
     /* Styles critiques inline — indépendants du cache style.css */
     .panel        { display: none !important; }
     .panel.active { display: block !important; }
+    /* ── CHAT ÉTUDIANT ──────────────────────────────────────────────── */
+    .chat-layout { display:grid; grid-template-columns:260px 1fr; height:calc(100vh - 200px); min-height:420px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; }
+    .conv-list { border-right:1.5px solid var(--border); display:flex; flex-direction:column; background:var(--cream); }
+    .conv-list-head { display:flex; align-items:center; justify-content:space-between; padding:.7rem 1rem; font-weight:700; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; border-bottom:1.5px solid var(--border); background:#fff; flex-shrink:0; }
+    #convItems { flex:1; overflow-y:auto; }
+    .conv-item { display:flex; align-items:center; gap:.65rem; padding:.7rem 1rem; cursor:pointer; border-bottom:1px solid var(--border); transition:background .12s; }
+    .conv-item:hover { background:rgba(201,168,76,.08); }
+    .conv-avatar { width:36px; height:36px; border-radius:50%; background:var(--gold, #C9A84C); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
+    .conv-name { font-weight:600; font-size:.83rem; }
+    .conv-last { font-size:.71rem; color:var(--muted); margin-top:.1rem; }
+    .chat-area { display:flex; flex-direction:column; overflow:hidden; }
+    .chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:.4rem; font-size:.86rem; }
+    .chat-header { display:flex; align-items:center; gap:.7rem; padding:.7rem 1.1rem; border-bottom:1.5px solid var(--border); background:var(--cream); flex-shrink:0; font-weight:600; font-size:.88rem; }
+    #msgsWrap { flex:1; overflow-y:auto; padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.5rem; }
+    .chat-input-row { display:flex; gap:.5rem; padding:.7rem 1rem; border-top:1.5px solid var(--border); background:var(--cream); flex-shrink:0; }
+    .chat-input-row input { flex:1; padding:.52rem .85rem; border:1.5px solid var(--border); border-radius:8px; font-family:Jost,sans-serif; font-size:.85rem; outline:none; transition:border-color .15s; }
+    .chat-input-row input:focus { border-color:var(--gold, #C9A84C); }
+    .msg { display:flex; flex-direction:column; max-width:68%; }
+    .msg-me { align-self:flex-end; align-items:flex-end; }
+    .msg-other { align-self:flex-start; align-items:flex-start; }
+    .msg-sender { font-size:.68rem; font-weight:700; color:var(--muted); margin-bottom:.12rem; text-transform:uppercase; letter-spacing:.04em; }
+    .msg-bubble { padding:.5rem .85rem; border-radius:14px; font-size:.85rem; line-height:1.5; word-break:break-word; }
+    .msg-me .msg-bubble { background:var(--gold, #C9A84C); color:#fff; border-bottom-right-radius:4px; }
+    .msg-other .msg-bubble { background:var(--cream); border:1.5px solid var(--border); border-bottom-left-radius:4px; }
+    .msg-time { font-size:.67rem; color:var(--muted); margin-top:.18rem; }
+    .chat-empty-msgs { color:var(--muted); font-size:.82rem; text-align:center; padding:2rem; }
+    /* Notifications */
+    .notif-item { display:flex; align-items:flex-start; gap:.8rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); transition:background .12s; cursor:default; }
+    .notif-item.unread { background:rgba(201,168,76,.06); border-left:3px solid var(--gold, #C9A84C); }
+    .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--gold, #C9A84C); flex-shrink:0; margin-top:.35rem; }
+    .notif-dot.read { background:var(--border); }
+    .notif-title { font-size:.84rem; font-weight:600; }
+    .notif-meta  { font-size:.71rem; color:var(--muted); margin-top:.12rem; }
+
   </style>
 </head>
 <body>
@@ -46,6 +80,11 @@
         <span class="nav-label">Demandes</span>
         <a class="nav-item" data-panel="releve"     href="#"><span class="nav-icon">📄</span>Relevé de notes</a>
         <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon">🏆</span>Mon classement</a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Communication</span>
+        <a class="nav-item" data-panel="notifs" href="#"><span class="nav-icon">🔔</span>Notifications</a>
+        <a class="nav-item" id="chatNavItem" data-panel="chat" href="#" style="display:none"><span class="nav-icon">💬</span>Chat (délégué)</a>
       </div>
     </nav>
 
@@ -97,17 +136,6 @@
 
       <!-- NOTES -->
       <section class="panel" id="panel-notes">
-        <div class="section-head">
-          <h3 class="section-title">Mes notes</h3>
-          <div class="topbar-actions">
-            <select class="select-sm" id="semSelect">
-              <option value="1">Semestre 1</option><option value="2">Semestre 2</option>
-              <option value="3">Semestre 3</option><option value="4">Semestre 4</option>
-              <option value="5">Semestre 5</option><option value="6">Semestre 6</option>
-            </select>
-            <button class="btn btn-gold btn-sm" id="loadNotesBtn">Afficher</button>
-          </div>
-        </div>
         <div id="notesContent"></div>
       </section>
 
@@ -128,9 +156,7 @@
           <div class="form-group">
             <label>Semestre</label>
             <select class="select-sm" id="releveSelect" style="width:100%">
-              <option value="1">Semestre 1</option><option value="2">Semestre 2</option>
-              <option value="3">Semestre 3</option><option value="4">Semestre 4</option>
-              <option value="5">Semestre 5</option><option value="6">Semestre 6</option>
+              <option value="">Chargement…</option>
             </select>
           </div>
           <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.75rem;margin-top:.5rem">Envoyer la demande</button>
@@ -142,6 +168,53 @@
       <section class="panel" id="panel-classement">
         <div class="section-head"><h3 class="section-title">Mon classement</h3></div>
         <div id="classementContent"></div>
+      </section>
+
+      <!-- NOTIFICATIONS -->
+      <section class="panel" id="panel-notifs">
+        <div class="section-head">
+          <h3 class="section-title">🔔 Notifications</h3>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-outline btn-sm" onclick="markAllNotifsRead()">✓ Tout lire</button>
+            <button class="btn btn-outline btn-sm" onclick="loadNotifs()">↻</button>
+          </div>
+        </div>
+        <div id="notifsList"></div>
+      </section>
+
+      <!-- CHAT DÉLÉGUÉ -->
+      <section class="panel" id="panel-chat">
+        <div class="chat-layout">
+          <div class="conv-list">
+            <div class="conv-list-head">
+              <span>Conversations</span>
+              <button class="btn btn-gold btn-sm" onclick="openChatModal()">+ Nouvelle</button>
+            </div>
+            <div id="convItems"><div class="loader"></div></div>
+          </div>
+          <div class="chat-area" id="chatArea">
+            <div class="chat-empty">
+              <div style="font-size:2.5rem">💬</div>
+              <p>Sélectionnez une conversation</p>
+            </div>
+          </div>
+        </div>
+        <!-- Modal nouvelle conversation -->
+        <div id="chatModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center">
+          <div style="background:#fff;border-radius:14px;padding:1.5rem;width:min(440px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.2)">
+            <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:1rem">Nouvelle conversation</h3>
+            <div style="margin-bottom:.8rem">
+              <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.3rem">Rechercher un enseignant</label>
+              <input type="text" id="chatSearchInput" placeholder="Nom ou prénom…" oninput="chatSearchUsers(this.value)"
+                style="width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif;font-size:.85rem;outline:none;box-sizing:border-box"/>
+            </div>
+            <div id="chatUserList" style="max-height:240px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;margin-bottom:1rem;min-height:48px"></div>
+            <div style="display:flex;gap:.6rem;justify-content:flex-end">
+              <button class="btn btn-outline" onclick="closeChatModal()">Annuler</button>
+              <button class="btn btn-gold" id="btnStartChat" onclick="startChatConv()" disabled>Démarrer</button>
+            </div>
+          </div>
+        </div>
       </section>
 
     </div>

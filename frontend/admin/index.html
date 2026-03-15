@@ -1553,13 +1553,27 @@ window.loadUsers = function() {
   }).then(function(users) {
     var su = ge('st-users'); if (su) su.textContent = users.length;
     if (!users.length) { wrap.innerHTML = empty('👤','Aucun utilisateur'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>Nom</th><th>Identifiant</th><th>Email</th><th>Rôle(s)</th><th>Actif</th><th>Actions</th></tr></thead><tbody>'
+    wrap.innerHTML = '<table><thead><tr>'
+      + '<th>Nom</th><th>Username</th><th>UUID Keycloak</th><th>Email</th><th>Rôle(s)</th><th>Actif</th><th>Actions</th>'
+      + '</tr></thead><tbody>'
       + users.map(function(u) {
-          return '<tr><td>'+esc(u.first_name)+' '+esc(u.last_name)+'</td>'
-            +'<td><code>'+esc(u.username)+'</code></td><td>'+esc(u.email)+'</td>'
-            +'<td>'+(u.roles||[]).map(function(r){ return '<span class="badge badge-'+r+'">'+r+'</span>'; }).join(' ')+'</td>'
-            +'<td>'+(u.enabled?'✅':'❌')+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteUser(\''+u.id+'\')">🗑</button></td></tr>';
+          return '<tr>'
+            + '<td style="white-space:nowrap">'+esc(u.first_name)+' '+esc(u.last_name)+'</td>'
+            + '<td><code>'+esc(u.username)+'</code></td>'
+            + '<td>'
+            +   '<div style="display:flex;align-items:center;gap:.4rem">'
+            +     '<code style="font-size:.72rem;color:var(--muted);letter-spacing:.02em">'+esc(u.id)+'</code>'
+            +     '<button class="btn btn-outline btn-sm" style="padding:.15rem .5rem;font-size:.7rem;flex-shrink:0"'
+            +       ' onclick="copyUUID(\''+u.id+'\',this)" title="Copier">📋</button>'
+            +   '</div>'
+            + '</td>'
+            + '<td>'+esc(u.email)+'</td>'
+            + '<td>'+(u.roles||[]).map(function(r){ return '<span class="badge badge-'+r+'">'+r+'</span>'; }).join(' ')+'</td>'
+            + '<td>'+(u.enabled?'✅':'❌')+'</td>'
+            + '<td class="td-actions">'
+            +   '<button class="btn btn-danger btn-sm" onclick="deleteUser(\''+u.id+'\')">🗑</button>'
+            + '</td>'
+            + '</tr>';
         }).join('')
       + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️', String(e.message||e)); });
@@ -1583,6 +1597,27 @@ window.deleteUser = function(id) {
   api('DELETE', '/api/admin/users/'+id).then(function(r) {
     if (r.ok || r.status===204) { showToast('Supprimé ✓','success'); loadUsers(); }
     else errToast(r);
+  });
+};
+
+window.copyUUID = function(uuid, btn) {
+  navigator.clipboard.writeText(uuid).then(function() {
+    var old = btn.textContent;
+    btn.textContent = '✓';
+    btn.style.color = 'green';
+    setTimeout(function() { btn.textContent = old; btn.style.color = ''; }, 1500);
+    showToast('UUID copié ✓', 'success');
+  }).catch(function() {
+    /* fallback pour navigateurs sans clipboard API */
+    var ta = document.createElement('textarea');
+    ta.value = uuid;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('UUID copié ✓', 'success');
   });
 };
 

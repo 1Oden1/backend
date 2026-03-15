@@ -11,6 +11,7 @@ from app.models import DemandeClassement, DemandeReleve, Etudiant
 from app.schemas import (
     DemandeClassementIn, DemandeClassementOut,
     DemandeReleveIn, DemandeReleveOut,
+    EtudiantRead,
     MonClassementOut, ReleveOut, SemestreNotesOut,
 )
 from app.services import (
@@ -20,6 +21,20 @@ from app.services import (
 )
 
 router = APIRouter(prefix="/api/v1/notes/etudiant", tags=["Étudiant"])
+
+
+# ── Profil étudiant ───────────────────────────────────────────────────────────
+
+@router.get("/me", response_model=EtudiantRead,
+            summary="Mon profil étudiant (filière, CNE, etc.)")
+def mon_profil(
+    db:   Session = Depends(get_db),
+    user: dict    = Depends(require_student),
+):
+    etudiant = get_etudiant_by_user_id(db, user["sub"])
+    if not etudiant:
+        raise HTTPException(404, "Profil étudiant introuvable. Contactez l'administration.")
+    return etudiant
 
 
 # ── Notes ─────────────────────────────────────────────────────────────────────

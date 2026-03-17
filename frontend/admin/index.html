@@ -511,7 +511,11 @@
       <div class="tab-pane active" id="notes-etudiants">
         <div class="section-head">
           <h3 class="section-title">Étudiants inscrits</h3>
-          <div style="display:flex;gap:.5rem">
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <select id="etudFiliereFilter" onchange="loadEtudiants()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Toutes les filières</option>
+            </select>
             <button class="btn btn-outline btn-sm" onclick="loadEtudiants()">↻</button>
             <button class="btn btn-gold btn-sm" onclick="openModal('modalEtudiant')">+ Étudiant</button>
           </div>
@@ -523,7 +527,11 @@
       <div class="tab-pane" id="notes-enseignants">
         <div class="section-head">
           <h3 class="section-title">Enseignants (notes)</h3>
-          <div style="display:flex;gap:.5rem">
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <select id="ensDeptFilter" onchange="loadEnseignantsNotes()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Tous les départements</option>
+            </select>
             <button class="btn btn-outline btn-sm" onclick="loadEnseignantsNotes()">↻</button>
             <button class="btn btn-gold btn-sm" onclick="openModal('modalEnseignantNotes')">+ Enseignant</button>
           </div>
@@ -597,7 +605,24 @@
       <div class="tab-pane" id="notes-releves">
         <div class="section-head">
           <h3 class="section-title">Demandes de relevés</h3>
-          <button class="btn btn-outline btn-sm" onclick="loadReleves()">↻ Actualiser</button>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <select id="releveStatutFilter" onchange="loadReleves()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="approuve">Approuvé</option>
+              <option value="rejete">Rejeté</option>
+            </select>
+            <select id="releveFiliereFilter" onchange="loadReleves()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Toutes les filières</option>
+            </select>
+            <select id="releveSemestreFilter" onchange="loadReleves()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Tous les semestres</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="loadReleves()">↻</button>
+          </div>
         </div>
         <div id="relevesContent"></div>
       </div>
@@ -606,7 +631,24 @@
       <div class="tab-pane" id="notes-classements">
         <div class="section-head">
           <h3 class="section-title">Demandes de classements</h3>
-          <button class="btn btn-outline btn-sm" onclick="loadClassements()">↻ Actualiser</button>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <select id="classStatutFilter" onchange="loadClassements()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="approuve">Approuvé</option>
+              <option value="rejete">Rejeté</option>
+            </select>
+            <select id="classFiliereFilter" onchange="loadClassements()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Toutes les filières</option>
+            </select>
+            <select id="classSemestreFilter" onchange="loadClassements()"
+              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
+              <option value="">Tous les semestres</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="loadClassements()">↻</button>
+          </div>
         </div>
         <div id="classementsContent"></div>
       </div>
@@ -741,8 +783,11 @@
             </p>
             <div class="form-grid">
               <div class="form-group">
-                <label>ID Filière</label>
-                <input type="number" id="fevFiliereId" placeholder="ex: 1"/>
+                <label>Filière</label>
+                <select id="fevFiliereId"
+                  style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif">
+                  <option value="">Chargement…</option>
+                </select>
               </div>
               <div class="form-group">
                 <label>Titre</label>
@@ -801,6 +846,7 @@
         <select id="uRole">
           <option value="etudiant">Étudiant</option>
           <option value="enseignant">Enseignant</option>
+          <option value="delegue">Délégué</option>
           <option value="admin">Administrateur</option>
         </select>
       </div>
@@ -917,11 +963,39 @@
       <div class="form-group"><label>Prénom</label><input type="text" id="ecPrenom" placeholder="Prénom"/></div>
       <div class="form-group"><label>Nom</label><input type="text" id="ecNom" placeholder="Nom"/></div>
       <div class="form-group full"><label>Email</label><input type="email" id="ecEmail" placeholder="email@est.ma"/></div>
-      <div class="form-group full"><label>User ID Keycloak (optionnel)</label><input type="text" id="ecUserId" placeholder="uuid Keycloak"/></div>
+      <div class="form-group full">
+        <label>UUID Keycloak <span style="color:crimson">*</span>
+          <small style="font-weight:400;color:var(--muted)"> — visible dans Utilisateurs → colonne UUID</small>
+        </label>
+        <input type="text" id="ecUserId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('modalEnseignantCal')">Annuler</button>
       <button class="btn btn-gold"    onclick="createEnseignantCal()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit enseignant calendar -->
+<div class="modal-overlay" id="modalEditEnseignantCal">
+  <div class="modal">
+    <h3>Modifier l'enseignant (calendrier)</h3>
+    <input type="hidden" id="ecEditId"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Prénom</label><input type="text" id="ecEditPrenom"/></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="ecEditNom"/></div>
+      <div class="form-group full"><label>Email</label><input type="email" id="ecEditEmail"/></div>
+      <div class="form-group full">
+        <label>UUID Keycloak <span style="color:crimson">*</span>
+          <small style="font-weight:400;color:var(--muted)"> — copier depuis Utilisateurs → 📋</small>
+        </label>
+        <input type="text" id="ecEditUserId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditEnseignantCal')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateEnseignantCal()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1143,7 +1217,7 @@ window.refreshCurrentPanel = function() {
     notes:     loadEtudiants,
     audit:     loadAudit,
     health:    function(){ loadHealth('healthGrid', false); },
-    messaging: function(){ loadConversations(); loadNotifications(); }
+    messaging: function(){ loadConversations(); loadNotifications(); initFiliereSelects(); }
   };
   var fn = fns[_currentPanelId];
   if (fn) fn();
@@ -1173,7 +1247,7 @@ window.switchPanel = function(id, navEl) {
 
   var fns = {
     users: loadUsers, files: loadFiles, calendar: loadAnnees,
-    notes: loadEtudiants, audit: loadAudit,
+    notes: function(){ loadEtudiants(); initFiliereSelects(); }, audit: loadAudit,
     health: function(){ loadHealth('healthGrid',false); },
     messaging: function(){ loadConversations(); loadNotifications(); }
   };
@@ -1447,6 +1521,78 @@ window.msgTab   = function(btn, id) { switchTab(id, btn, id); };
 /* ══════════════════════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════════════════════ */
+/* ── Chargement des filières/depts dans les selects filtre + notification ── */
+window.initFiliereSelects = function() {
+  // Reset tous les selects filière/dept/semestre (éviter doublons)
+  ['etudFiliereFilter','releveFiliereFilter','classFiliereFilter','fevFiliereId',
+   'ensDeptFilter','releveSemestreFilter','classSemestreFilter'].forEach(function(id){
+    var sel = ge(id);
+    if (!sel) return;
+    var firstOpt = sel.options[0] ? sel.options[0].text : '';
+    sel.innerHTML = '';
+    var o = document.createElement('option');
+    o.value = '';
+    o.textContent = firstOpt || '— Tous —';
+    sel.appendChild(o);
+  });
+  api('GET', '/api/admin/calendar/departements').then(function(r){ return r.ok?r.json():[]; })
+  .then(function(depts) {
+    (depts||[]).forEach(function(d) {
+      _deptsMap[d.id] = d.nom;
+      var dSel = ge('ensDeptFilter');
+      if (dSel) { var o=document.createElement('option'); o.value=d.id; o.textContent=d.nom; dSel.appendChild(o); }
+    });
+    return Promise.all((depts||[]).map(function(d){
+      return api('GET','/api/admin/calendar/departements/'+d.id+'/filieres')
+        .then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; });
+    }));
+  })
+  .then(function(groups) {
+    var allFilieres = [].concat.apply([], groups);
+    allFilieres.forEach(function(f) {
+      _filieresMap[f.id] = f.nom;
+      // Tous les selects filière
+      ['etudFiliereFilter','releveFiliereFilter','classFiliereFilter'].forEach(function(id){
+        var sel = ge(id);
+        if (sel) { var o=document.createElement('option'); o.value=f.id; o.textContent=f.nom; sel.appendChild(o); }
+      });
+      // Select notification filière
+      var fevSel = ge('fevFiliereId');
+      if (fevSel && fevSel.tagName==='SELECT') {
+        if (fevSel.options.length===1 && fevSel.options[0].value==='') fevSel.innerHTML='';
+        var o=document.createElement('option'); o.value=f.id; o.textContent=f.nom; fevSel.appendChild(o);
+      }
+    });
+    // Charger semestres pour chaque filière
+    return Promise.all(allFilieres.map(function(f){
+      return api('GET','/api/admin/calendar/filieres/'+f.id+'/semestres')
+        .then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; });
+    }));
+  })
+  .then(function(semGroups) {
+    var allSems = [].concat.apply([], semGroups);
+    allSems.forEach(function(s) {
+      _semestresMap[s.id] = s.nom;
+      ['releveSemestreFilter','classSemestreFilter'].forEach(function(id){
+        var sel = ge(id);
+        if (sel) {
+          // Éviter doublons
+          var exists = false;
+          for (var i=0; i<sel.options.length; i++) if (sel.options[i].value==s.id) { exists=true; break; }
+          if (!exists) { var o=document.createElement('option'); o.value=s.id; o.textContent=s.nom; sel.appendChild(o); }
+        }
+      });
+    });
+    // Construire _etudiantFiliereMap depuis la liste des étudiants
+    return api('GET','/api/admin/notes/admin/etudiants').then(function(r){ return r.ok?r.json():[]; });
+  })
+  .then(function(etuds) {
+    (etuds||[]).forEach(function(e){ _etudiantFiliereMap[e.id] = e.calendar_filiere_id; });
+  })
+  .catch(function(e){ console.warn('initFiliereSelects erreur:', e); });
+};
+// initFiliereSelects se réinitialise à chaque appel
+
 window.loadDashboard = function() {
   loadHealth('servicesGrid', true);
   var el = ge('recentFilesList');
@@ -1971,12 +2117,29 @@ window.loadEnseignantsCal = function() {
     return r.json();
   }).then(function(list) {
     if (!Array.isArray(list) || !list.length) { wrap.innerHTML = empty('👨‍🏫','Aucun enseignant enregistré dans le calendrier.'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Prénom</th><th>Nom</th><th>Email</th><th>Actions</th></tr></thead><tbody>'
+    wrap.innerHTML = '<table><thead><tr>'
+      + '<th>ID</th><th>Prénom</th><th>Nom</th><th>Email</th>'
+      + '<th>UUID Keycloak</th><th>Actions</th>'
+      + '</tr></thead><tbody>'
       + list.map(function(e) {
-          return '<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.prenom)+'</td><td>'+esc(e.nom)+'</td><td>'+esc(e.email||'—')+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteEnseignantCal('+e.id+')">🗑</button></td></tr>';
+          var hasUid = !!e.user_id;
+          return '<tr>'
+            + '<td><strong>'+e.id+'</strong></td>'
+            + '<td>'+esc(e.prenom)+'</td><td>'+esc(e.nom)+'</td><td>'+esc(e.email||'—')+'</td>'
+            + '<td>'
+            + (hasUid
+              ? '<div style="display:flex;align-items:center;gap:.3rem"><code style="font-size:.68rem;color:var(--muted)">'+esc(e.user_id.substring(0,8))+'…</code>'
+                + '<button class="btn btn-outline btn-sm" style="padding:.1rem .4rem;font-size:.68rem" onclick="copyUUID(\''+e.user_id+'\',this)">📋</button></div>'
+              : '<span style="color:crimson;font-size:.75rem">⚠ Non lié</span>')
+            + '</td>'
+            + '<td class="td-actions">'
+            + '<button class="btn btn-outline btn-sm" onclick="editEnseignantCal('+e.id+',\''+esc(e.prenom)+'\',\''+esc(e.nom)+'\',\''+esc(e.email||'')+'\',\''+esc(e.user_id||'')+'\')">✏</button> '
+            + '<button class="btn btn-danger btn-sm" onclick="deleteEnseignantCal('+e.id+')">🗑</button>'
+            + '</td></tr>';
         }).join('') + '</tbody></table>'
-      + '<p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">'+list.length+' enseignant(s)</p>';
+      + '<p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">'+list.length+' enseignant(s)'
+      + (list.filter(function(e){return !e.user_id;}).length ? ' · <span style="color:crimson">⚠ '+list.filter(function(e){return !e.user_id;}).length+' sans UUID Keycloak (chat/notifications désactivés)</span>' : ' · Tous liés ✓')
+      + '</p>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur enseignants — '+e.message); });
 }
 
@@ -1990,6 +2153,31 @@ window.createEnseignantCal = function() {
     else errToast(r);
   });
 };
+window.editEnseignantCal = function(id, prenom, nom, email, userId) {
+  ge('ecEditId').value    = id;
+  ge('ecEditPrenom').value = prenom;
+  ge('ecEditNom').value    = nom;
+  ge('ecEditEmail').value  = email;
+  ge('ecEditUserId').value = userId;
+  openModal('modalEditEnseignantCal');
+};
+
+window.updateEnseignantCal = function() {
+  var id     = ge('ecEditId').value;
+  var userId = val('ecEditUserId');
+  var body   = {
+    prenom:  val('ecEditPrenom'),
+    nom:     val('ecEditNom'),
+    email:   val('ecEditEmail'),
+  };
+  if (userId) body.user_id = userId;
+  if (!body.prenom || !body.nom || !body.email) { showToast('Prénom, nom et email requis','error'); return; }
+  api('PUT', '/api/admin/calendar/enseignants/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Enseignant mis à jour ✓','success'); closeModal('modalEditEnseignantCal'); loadEnseignantsCal(); }
+    else errToast(r);
+  });
+};
+
 window.deleteEnseignantCal = function(id) {
   if (!confirm('Supprimer ?')) return;
   api('DELETE', '/api/admin/calendar/enseignants/'+id).then(function(r) {
@@ -2136,16 +2324,20 @@ window.deleteSeance = function(id) {
 ══════════════════════════════════════════════════════════════════════ */
 window.loadEtudiants = function() {
   var wrap = ge('notesEtudiantContent'); if (!wrap) return;
+  var filiereId = val('etudFiliereFilter');
   wrap.innerHTML = '<div class="loader"></div>';
   api('GET', '/api/admin/notes/admin/etudiants').then(function(r) {
     if (!r.ok) throw new Error(r.status); return r.json();
   }).then(function(list) {
     if (!Array.isArray(list)) list = list.etudiants || [];
-    if (!list.length) { wrap.innerHTML = empty('📊','Aucun étudiant. Cliquez + Étudiant.'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>CNE</th><th>Prénom</th><th>Nom</th><th>Filière ID</th><th>Actions</th></tr></thead><tbody>'
+    // Filtre côté client par filière si sélectionnée
+    if (filiereId) list = list.filter(function(e){ return String(e.calendar_filiere_id) === filiereId; });
+    if (!list.length) { wrap.innerHTML = empty('📊','Aucun étudiant'+(filiereId?' pour cette filière':'. Cliquez + Étudiant.')); return; }
+    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>CNE</th><th>Prénom</th><th>Nom</th><th>Filière</th><th>Actions</th></tr></thead><tbody>'
       + list.map(function(e) {
+          var fNom = _filieresMap[e.calendar_filiere_id] || ('ID '+e.calendar_filiere_id);
           return '<tr><td>'+e.id+'</td><td>'+esc(e.cne||'—')+'</td><td>'+esc(e.prenom||'—')+'</td><td>'+esc(e.nom||'—')+'</td>'
-            +'<td>'+esc(e.calendar_filiere_id||'—')+'</td>'
+            +'<td>'+esc(fNom)+'</td>'
             +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteEtudiant('+e.id+')">🗑</button></td></tr>';
         }).join('') + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur étudiants ('+e.message+')'); });
@@ -2170,16 +2362,25 @@ window.deleteEtudiant = function(id) {
 /* Notes — Enseignants */
 window.loadEnseignantsNotes = function() {
   var wrap = ge('notesEnseignantContent'); if (!wrap) return;
+  var deptId = val('ensDeptFilter');
   wrap.innerHTML = '<div class="loader"></div>';
   api('GET', '/api/admin/notes/admin/enseignants').then(function(r) {
     if (!r.ok) throw new Error(r.status); return r.json();
   }).then(function(list) {
-    if (!list.length) { wrap.innerHTML = empty('👨‍🏫','Aucun enseignant'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Prénom</th><th>Nom</th><th>Dept. ID</th><th>Actions</th></tr></thead><tbody>'
+    if (deptId) list = list.filter(function(e){ return String(e.calendar_departement_id) === deptId; });
+    if (!list.length) { wrap.innerHTML = empty('👨‍🏫','Aucun enseignant'+(deptId?' pour ce département':'')); return; }
+    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Prénom</th><th>Nom</th><th>Département</th><th>UUID Keycloak</th><th>Actions</th></tr></thead><tbody>'
       + list.map(function(e) {
+          var dNom = _deptsMap[e.calendar_departement_id] || ('ID '+e.calendar_departement_id);
+          var hasUid = !!e.user_id;
           return '<tr><td>'+e.id+'</td><td>'+esc(e.prenom)+'</td><td>'+esc(e.nom)+'</td>'
-            +'<td>'+esc(e.calendar_departement_id||'—')+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteEnseignantNotes('+e.id+')">🗑</button></td></tr>';
+            +'<td>'+esc(dNom)+'</td>'
+            +'<td>'+(hasUid
+              ? '<code style="font-size:.68rem;color:var(--muted)">'+esc(e.user_id.substring(0,8))+'…</code>'
+              : '<span style="color:crimson;font-size:.75rem">⚠ Non lié</span>')+'</td>'
+            +'<td class="td-actions">'
+            +'<button class="btn btn-danger btn-sm" onclick="deleteEnseignantNotes('+e.id+')">🗑</button>'
+            +'</td></tr>';
         }).join('') + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur enseignants ('+e.message+')'); });
 }
@@ -2249,17 +2450,36 @@ window.publierNotes = function() {
 /* Notes — Demandes relevés */
 window.loadReleves = function() {
   var wrap = ge('relevesContent'); if (!wrap) return;
+  var statut  = val('releveStatutFilter');
+  var filiere = val('releveFiliereFilter');
+  var semId   = val('releveSemestreFilter');
   wrap.innerHTML = '<div class="loader"></div>';
-  api('GET', '/api/admin/notes/admin/demandes-releve').then(function(r) {
+  var url = '/api/admin/notes/admin/demandes-releve' + (statut ? '?statut='+statut : '');
+  api('GET', url).then(function(r) {
     if (!r.ok) throw new Error(r.status); return r.json();
   }).then(function(list) {
+    // Filtre côté client : filière (via _etudiantsMap) et semestre
+    if (filiere || semId) {
+      list = list.filter(function(d) {
+        var fOk = !filiere || String(_etudiantFiliereMap[d.etudiant_id]) === filiere;
+        var sOk = !semId   || String(d.calendar_semestre_id) === semId;
+        return fOk && sOk;
+      });
+    }
     if (!list.length) { wrap.innerHTML = empty('📋','Aucune demande de relevé'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Étudiant</th><th>Semestre</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'
+    wrap.innerHTML = '<table><thead><tr>'
+      + '<th>ID</th><th>Étudiant</th><th>Filière</th><th>Semestre</th><th>Statut</th><th>Date</th><th>Actions</th>'
+      + '</tr></thead><tbody>'
       + list.map(function(d) {
-          return '<tr><td>'+d.id+'</td><td>#'+d.etudiant_id+'</td><td>#'+d.semestre_id+'</td>'
+          var fNom  = _filieresMap[_etudiantFiliereMap[d.etudiant_id]] || '—';
+          var sNom  = _semestresMap[d.calendar_semestre_id] || ('S#'+d.calendar_semestre_id);
+          var date  = d.demande_le ? new Date(d.demande_le).toLocaleDateString('fr-FR') : '—';
+          return '<tr><td>'+d.id+'</td><td>#'+d.etudiant_id+'</td>'
+            +'<td>'+esc(fNom)+'</td><td>'+esc(sNom)+'</td>'
             +'<td><span class="badge badge-'+(d.statut==='approuve'?'enseignant':d.statut==='rejete'?'admin':'etudiant')+'">'+d.statut+'</span></td>'
+            +'<td style="font-size:.78rem">'+date+'</td>'
             +'<td class="td-actions">'+(d.statut==='en_attente'
-              ? '<button class="btn btn-gold btn-sm" onclick="traiterReleve('+d.id+',\'approuve\')">✓ Approuver</button> <button class="btn btn-danger btn-sm" onclick="traiterReleve('+d.id+',\'rejete\')">✗ Rejeter</button>'
+              ? '<button class="btn btn-gold btn-sm" onclick="traiterReleve('+d.id+',\'approuve\')">✓</button> <button class="btn btn-danger btn-sm" onclick="traiterReleve('+d.id+',\'rejete\')">✗</button>'
               : '—')+'</td></tr>';
         }).join('') + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur ('+e.message+')'); });
@@ -2275,16 +2495,34 @@ window.traiterReleve = function(id, statut) {
 
 window.loadClassements = function() {
   var wrap = ge('classementsContent'); if (!wrap) return;
+  var statut  = val('classStatutFilter');
+  var filiere = val('classFiliereFilter');
+  var semId   = val('classSemestreFilter');
   wrap.innerHTML = '<div class="loader"></div>';
-  api('GET', '/api/admin/notes/admin/demandes-classement').then(function(r) {
+  var url = '/api/admin/notes/admin/demandes-classement' + (statut ? '?statut='+statut : '');
+  api('GET', url).then(function(r) {
     if (!r.ok) throw new Error(r.status); return r.json();
   }).then(function(list) {
+    if (filiere || semId) {
+      list = list.filter(function(d) {
+        var fOk = !filiere || String(_etudiantFiliereMap[d.etudiant_id]) === filiere;
+        var sOk = !semId   || String(d.calendar_semestre_id) === semId;
+        return fOk && sOk;
+      });
+    }
     if (!list.length) { wrap.innerHTML = empty('🏆','Aucune demande de classement'); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Étudiant</th><th>Semestre</th><th>Type</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'
+    wrap.innerHTML = '<table><thead><tr>'
+      + '<th>ID</th><th>Étudiant</th><th>Filière</th><th>Semestre</th><th>Type</th><th>Statut</th><th>Date</th><th>Actions</th>'
+      + '</tr></thead><tbody>'
       + list.map(function(d) {
-          return '<tr><td>'+d.id+'</td><td>#'+d.etudiant_id+'</td><td>#'+d.semestre_id+'</td>'
+          var fNom = _filieresMap[_etudiantFiliereMap[d.etudiant_id]] || '—';
+          var sNom = _semestresMap[d.calendar_semestre_id] || ('S#'+d.calendar_semestre_id);
+          var date = d.demande_le ? new Date(d.demande_le).toLocaleDateString('fr-FR') : '—';
+          return '<tr><td>'+d.id+'</td><td>#'+d.etudiant_id+'</td>'
+            +'<td>'+esc(fNom)+'</td><td>'+esc(sNom)+'</td>'
             +'<td>'+esc(d.type_classement||'—')+'</td>'
             +'<td><span class="badge badge-'+(d.statut==='approuve'?'enseignant':d.statut==='rejete'?'admin':'etudiant')+'">'+d.statut+'</span></td>'
+            +'<td style="font-size:.78rem">'+date+'</td>'
             +'<td class="td-actions">'+(d.statut==='en_attente'
               ? '<button class="btn btn-gold btn-sm" onclick="traiterClassement('+d.id+',\'approuve\')">✓</button> <button class="btn btn-danger btn-sm" onclick="traiterClassement('+d.id+',\'rejete\')">✗</button>'
               : '—')+'</td></tr>';
@@ -2307,6 +2545,10 @@ var _activeConvId = null, _pollTimer = null;
 
 /* ── Variables état messagerie ───────────────────────────────────── */
 var _convSelectedUser = null;  // { id, name, roles }
+var _filieresMap         = {};  // { id → nom } — filières
+var _deptsMap            = {};  // { id → nom } — départements
+var _semestresMap        = {};  // { id → nom } — semestres
+var _etudiantFiliereMap  = {};  // { etudiant_id → calendar_filiere_id }
 var _convSearchTimer  = null;
 var _convUsersCache   = {};    // cache id → user object pour éviter JSON dans onclick
 
@@ -2526,7 +2768,7 @@ window.markAllNotifsRead = function() {
 };
 
 window.sendFiliereEvent = function() {
-  var fId = num('fevFiliereId'), title = val('fevTitle'), content = val('fevContent'), res = ge('filiereEventResult');
+  var fId = parseInt(val('fevFiliereId')||''), title = val('fevTitle'), content = val('fevContent'), res = ge('filiereEventResult');
   if (isNaN(fId)||!title||!content) { res.innerHTML=alertEl('err','Tous les champs sont requis.'); return; }
   api('POST', '/api/messaging/notifications/filiere-event', {filiere_id: fId, title: title, content: content}).then(function(r) {
     if (r.ok || r.status===202) {

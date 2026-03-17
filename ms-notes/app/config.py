@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # ms-calendar — appels internes pour la structure académique
     MS_CALENDAR_URL: str = "http://ent_ms_calendar:8000"
 
+    # ms-messaging — notifications directes après approbation de demandes
+    MS_MESSAGING_URL: str = "http://ent_ms_messaging:8000"
+
     # Token de service pour les appels /internal inter-microservices
     # Laisser vide en dev si ms-calendar ne vérifie pas l'auth sur /internal
     INTERNAL_SERVICE_TOKEN: str = ""

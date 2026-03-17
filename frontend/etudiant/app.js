@@ -25,6 +25,12 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function meErrMsg(status) {
+  if (status === 403) return 'Accès refusé — votre compte délégué n\'a pas encore de profil étudiant dans ms-notes. Contactez l\'administration.';
+  if (status === 404) return 'Profil étudiant introuvable — contactez l\'administration pour créer votre profil.';
+  return 'Erreur de chargement (HTTP ' + status + ')';
+}
+
 /* ── INIT ─────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   const name = currentUser.first_name || currentUser.username || 'Étudiant';
@@ -50,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const _rlBtn = document.getElementById('submitReleveBtn');
   if (_rlBtn) _rlBtn.addEventListener('click', demanderReleve);
   loadAccueil();
+  initSemestreSelects();  // peuple le select relevé dès le chargement
 });
 
 function switchPanel(id, navEl) {
@@ -63,6 +70,7 @@ function switchPanel(id, navEl) {
   if (id === 'notes')      initNotesPanel();
   if (id === 'emploi')     initEmploiPanel();
   if (id === 'classement') showClassementForm();
+  if (id === 'releve')     initRelevePanel();
   if (id === 'notifs')     loadNotifs();
   if (id === 'chat')       loadChatConversations();
 }
@@ -88,7 +96,7 @@ async function loadAccueil() {
   // 3. Pour chaque semestre : modules + emploi-du-temps
   try {
     const rMe = await api('GET', '/api/notes/etudiant/me');
-    if (!rMe.ok) throw new Error('profil introuvable');
+    if (!rMe.ok) { console.warn('Profil étudiant:', rMe.status, meErrMsg(rMe.status)); return; }
     const me = await rMe.json();
     const filiereId = me.calendar_filiere_id;
 
@@ -180,7 +188,7 @@ async function initNotesPanel() {
   try {
     // 1. Récupérer la filière de l'étudiant connecté
     const rMe = await api('GET', '/api/notes/etudiant/me');
-    if (!rMe.ok) throw new Error('Profil introuvable — contactez l\'administration.');
+    if (!rMe.ok) throw new Error(meErrMsg(rMe.status));
     const me = await rMe.json();
 
     // 2. Récupérer les semestres de sa filière
@@ -304,7 +312,7 @@ async function initEmploiPanel() {
   try {
     // Filière de l'étudiant → semestres directement
     const rMe = await api('GET', '/api/notes/etudiant/me');
-    if (!rMe.ok) throw new Error('Profil introuvable — contactez l\'administration.');
+    if (!rMe.ok) throw new Error(meErrMsg(rMe.status));
     const me = await rMe.json();
 
     const rSems = await api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`);
@@ -398,15 +406,68 @@ window.loadEmploi = async function(){
 };
 
 /* ── CLASSEMENT ───────────────────────────────────────────────────── */
-function showClassementForm(){
+async function showClassementForm(){
   const wrap=document.getElementById('classementContent');
   if(!wrap) return;
+  wrap.innerHTML='<div class="loader"></div>';
+
+  // Charger en parallèle : semestres de ma filière + mes demandes existantes
+  let semsOpts = '<option value="">Erreur chargement</option>';
+  let demandesHtml = '';
+  try {
+    const rMe = await api('GET', '/api/notes/etudiant/me');
+    if (rMe.ok) {
+      const me = await rMe.json();
+      const [rSems, rDemandes] = await Promise.all([
+        api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`),
+        api('GET', '/api/notes/etudiant/mes-demandes-classement')
+          .catch(() => ({ ok: false }))  // route optionnelle
+      ]);
+      if (rSems.ok) {
+        const sems = await rSems.json();
+        semsOpts = sems && sems.length
+          ? sems.map(s => `<option value="${s.id}">${escHtml(s.nom)}</option>`).join('')
+          : '<option value="">Aucun semestre</option>';
+      }
+      // Charger les demandes existantes via /demandes-classement/{id} n'est pas listable
+      // → on garde l'historique en sessionStorage
+      // Charger les demandes depuis l'API (pas sessionStorage)
+      const rDem = await api('GET', '/api/notes/etudiant/mes-demandes-classement').catch(() => ({ok:false}));
+      const hist = rDem.ok ? (await rDem.json()).map(d => ({
+        id: d.id, semId: d.calendar_semestre_id,
+        semNom: 'Semestre #' + d.calendar_semestre_id,
+        type: d.type_classement, statut: d.statut
+      })) : [];
+      if (hist.length) {
+        demandesHtml = '<div style="margin-bottom:1rem">'
+          + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Mes demandes précédentes</div>'
+          + hist.map(h => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;
+                         background:var(--cream);border:1.5px solid var(--border);border-radius:8px;margin-bottom:.4rem">
+              <div>
+                <span style="font-weight:600;font-size:.83rem">${escHtml(h.semNom||'Semestre #'+h.semId)}</span>
+                <span style="font-size:.75rem;color:var(--muted);margin-left:.4rem">${escHtml(h.type)}</span>
+              </div>
+              <button class="btn btn-outline btn-sm"
+                onclick="verifierClassementHistorique(${h.id}, this)">↻ Voir résultat</button>
+            </div>`).join('')
+          + '</div>';
+      }
+    } else {
+      semsOpts = `<option value="">${escHtml(meErrMsg(rMe.status))}</option>`;
+    }
+  } catch { semsOpts = '<option value="">Erreur chargement</option>'; }
+
   wrap.innerHTML=`
+    ${demandesHtml}
     <div class="form-card" style="max-width:420px">
-      <p class="form-card-desc">Demandez votre classement. L'administrateur doit d'abord l'approuver.</p>
-      <div class="form-group"><label>ID Semestre (calendrier)</label>
-        <input type="number" id="clSemId" placeholder="ex: 1" min="1"
-          style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif"/></div>
+      <p class="form-card-desc">Demandez votre classement. L'administrateur doit d'abord l'approuver. Vous serez notifié(e) dès la décision.</p>
+      <div class="form-group">
+        <label>Semestre</label>
+        <select id="clSemId" style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif">
+          ${semsOpts}
+        </select>
+      </div>
       <div class="form-group"><label>Type</label>
         <select id="clType" style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif">
           <option value="filiere">Par filière</option>
@@ -418,17 +479,53 @@ function showClassementForm(){
   document.getElementById('submitClassBtn').addEventListener('click', demanderClassement);
 }
 
+// Vérifier un classement depuis l'historique sessionStorage
+window.verifierClassementHistorique = async function(demandeId, btn) {
+  const resEl = btn.closest('div[style]');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await api('GET', `/api/notes/etudiant/demandes-classement/${demandeId}`);
+    if (!r.ok) { btn.disabled=false; btn.textContent='↻ Voir résultat'; showToast('Erreur','error'); return; }
+    const d = await r.json();
+    if (d.statut === 'approuve') {
+      const rc = await api('GET', `/api/notes/etudiant/classements/${demandeId}`);
+      if (rc.ok) {
+        const cl = await rc.json();
+        const wrap = document.getElementById('classementContent');
+        if (wrap) {
+          const card = document.createElement('div');
+          card.className = 'classement-card';
+          card.innerHTML = `<div class="trophy">🏆</div>
+            <div class="classement-rang">Rang ${cl.mon_rang ?? '—'}</div>
+            <div class="classement-sub">sur ${cl.total ?? '—'} étudiants · ${escHtml(cl.scope_nom||'')}</div>
+            <div class="classement-moy">Moyenne : ${cl.ma_moyenne!=null?parseFloat(cl.ma_moyenne).toFixed(2):'—'} / 20</div>`;
+          wrap.insertBefore(card, wrap.firstChild);
+        }
+      }
+    } else if (d.statut === 'rejete') {
+      showToast('Demande refusée : '+(d.motif_rejet||'sans motif'), 'error');
+    } else {
+      showToast('Demande toujours en attente…', '');
+    }
+  } catch { showToast('Erreur réseau','error'); }
+  btn.disabled=false; btn.textContent='↻ Voir résultat';
+};
+
 async function demanderClassement(){
-  const semId=parseInt(document.getElementById('clSemId').value);
+  const semId=parseInt(document.getElementById('clSemId')?.value||'');
   const type=document.getElementById('clType').value;
   const res=document.getElementById('clResult');
-  if(!semId){res.innerHTML='<div class="alert alert-err">Semestre ID requis.</div>';return;}
+  if(!semId||isNaN(semId)){res.innerHTML='<div class="alert alert-err">Sélectionnez un semestre.</div>';return;}
   try {
     const r=await api('POST','/api/notes/etudiant/demandes-classement',{calendar_semestre_id:semId,type_classement:type});
     if(r.ok||r.status===201){
       const d=await r.json();
-      res.innerHTML=`<div class="alert alert-ok">✓ Demande créée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong><br>
-        <small>Une fois approuvée, votre classement apparaîtra ici.</small></div>`;
+      res.innerHTML=`<div class="alert alert-ok">
+        ✓ Demande créée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong><br>
+        <small>Vous recevrez une notification quand l'admin aura traité votre demande.</small>
+        <br><button class="btn btn-outline btn-sm" style="margin-top:.5rem"
+          onclick="verifierClassement(${d.id},this.parentElement)">↻ Vérifier le statut</button>
+      </div>`;
       if(d.statut==='approuve') fetchClassementResult(d.id,res);
     } else if(r.status===409){
       const d=await r.json().catch(()=>({}));
@@ -439,6 +536,21 @@ async function demanderClassement(){
     }
   } catch{res.innerHTML='<div class="alert alert-err">✗ Erreur réseau.</div>';}
 }
+
+window.verifierClassement = async function(demandeId, resEl) {
+  try {
+    const r = await api('GET', `/api/notes/etudiant/demandes-classement/${demandeId}`);
+    if (!r.ok) { showToast('Erreur vérification','error'); return; }
+    const d = await r.json();
+    if (d.statut === 'approuve') {
+      fetchClassementResult(demandeId, resEl);
+    } else if (d.statut === 'rejete') {
+      resEl.innerHTML = `<div class="alert alert-err">❌ Demande refusée. Motif : ${escHtml(d.motif_rejet||'Non précisé')}</div>`;
+    } else {
+      showToast('Demande toujours en attente…','');
+    }
+  } catch { showToast('Erreur réseau','error'); }
+};
 
 async function fetchClassementResult(demandeId,resEl){
   try {
@@ -459,11 +571,20 @@ async function fetchClassementResult(demandeId,resEl){
 async function demanderReleve(){
   const sem=document.getElementById('releveSelect').value;
   const res=document.getElementById('releveResult');
+  if (!sem || sem === '' || isNaN(parseInt(sem))) {
+    res.innerHTML='<div class="alert alert-err">Sélectionnez un semestre valide.</div>';
+    return;
+  }
   try {
     const r=await api('POST','/api/notes/etudiant/demandes-releve',{calendar_semestre_id:parseInt(sem)});
     if(r.ok||r.status===201){
       const d=await r.json();
-      res.innerHTML=`<div class="alert alert-ok">✓ Demande envoyée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong></div>`;
+      res.innerHTML=`<div class="alert alert-ok">
+        ✓ Demande envoyée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong><br>
+        <small>Vous recevrez une notification dès que l'admin aura traité votre demande.</small>
+        <br><button class="btn btn-outline btn-sm" style="margin-top:.5rem"
+          onclick="verifierReleve(${d.id},this.parentElement)">↻ Vérifier le statut</button>
+      </div>`;
     } else if(r.status===409){
       res.innerHTML='<div class="alert alert-ok">ℹ️ Une demande est déjà en attente pour ce semestre.</div>';
     } else {
@@ -473,22 +594,179 @@ async function demanderReleve(){
   } catch{res.innerHTML='<div class="alert alert-err">✗ Erreur réseau.</div>';}
 }
 
+/* ── Panel relevé avec liste depuis l'API ───────────────────────── */
+async function initRelevePanel() {
+  const res = document.getElementById('releveResult');
+  if (!res) return;
+  res.innerHTML = '<div class="loader" style="margin:.5rem 0"></div>';
+  try {
+    // GET /api/notes/etudiant/mes-demandes-releve → toutes mes demandes
+    const r = await api('GET', '/api/notes/etudiant/mes-demandes-releve');
+    if (!r.ok) { res.innerHTML = ''; return; }
+    const demandes = await r.json();
+    if (!demandes || !demandes.length) { res.innerHTML = ''; return; }
+
+    // Enrichir avec les noms de semestres depuis le calendrier
+    const semIds = [...new Set(demandes.map(d => d.calendar_semestre_id))];
+    const semMap = {};
+    await Promise.all(semIds.map(sid =>
+      api('GET', `/api/calendar/semestres/${sid}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(s => { if (s) semMap[sid] = s.nom; })
+        .catch(() => {})
+    ));
+
+    res.innerHTML = '<div style="margin-bottom:.8rem">'
+      + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Mes demandes de relevé</div>'
+      + demandes.map(d => {
+          const semNom = semMap[d.calendar_semestre_id] || ('Semestre #' + d.calendar_semestre_id);
+          const badgeClass = d.statut==='approuve'?'enseignant':d.statut==='rejete'?'admin':'etudiant';
+          const date = d.demande_le ? new Date(d.demande_le).toLocaleDateString('fr-FR') : '';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;
+                       background:var(--cream);border:1.5px solid var(--border);border-radius:8px;margin-bottom:.35rem">
+            <div>
+              <span style="font-weight:600;font-size:.83rem">${escHtml(semNom)}</span>
+              <span class="badge badge-${badgeClass}" style="margin-left:.4rem;font-size:.68rem">${escHtml(d.statut)}</span>
+              <span style="font-size:.71rem;color:var(--muted);margin-left:.4rem">${date}</span>
+              ${d.motif_rejet ? `<div style="font-size:.72rem;color:crimson;margin-top:.15rem">Motif : ${escHtml(d.motif_rejet)}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:.4rem">
+              ${d.statut==='approuve'
+                ? `<button class="btn btn-gold btn-sm" onclick="telechargerReleve(${d.id})">📄 PDF</button>`
+                : `<button class="btn btn-outline btn-sm" onclick="initRelevePanel()">↻</button>`}
+            </div>
+          </div>`;
+        }).join('')
+      + '</div>';
+  } catch { res.innerHTML = ''; }
+}
+
+window.telechargerReleve = async function(demandeId) {
+  showToast('Génération du PDF…', '');
+  try {
+    // GET /api/notes/etudiant/releves/{id} → { demande_id, etudiant_cne, etudiant_nom, notes }
+    const r = await api('GET', `/api/notes/etudiant/releves/${demandeId}`);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      showToast('✗ ' + (d.detail || `Erreur ${r.status}`), 'error');
+      return;
+    }
+    const releve = await r.json();
+    const notes = releve.notes || {};
+    const elts  = notes.notes || [];
+    const moy   = notes.moyenne_semestre != null
+                  ? parseFloat(notes.moyenne_semestre).toFixed(2) : '—';
+
+    // Construire le HTML du relevé
+    const now = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+    const rows = elts.map(e =>
+      `<tr>
+        <td>Élément #${e.calendar_element_id}</td>
+        <td style="text-align:center">${e.note != null ? parseFloat(e.note).toFixed(2) : '—'}</td>
+        <td style="text-align:center">${e.note != null ? (parseFloat(e.note) >= 10 ? '✓' : '✗') : '—'}</td>
+      </tr>`
+    ).join('');
+
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
+      <title>Relevé de notes — ${escHtml(releve.etudiant_nom)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #1a1a1a; }
+        h1 { color: #8B6914; font-size: 1.4rem; margin-bottom: .2rem; }
+        .sub { color: #666; font-size: .85rem; margin-bottom: 1.5rem; }
+        .info { display: flex; gap: 2rem; margin-bottom: 1.5rem; }
+        .info div { font-size: .88rem; }
+        .info strong { display: block; font-size: .7rem; text-transform: uppercase;
+                       letter-spacing: .06em; color: #888; margin-bottom: .15rem; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+        th { background: #8B6914; color: #fff; padding: .5rem .7rem; text-align: left;
+             font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+        td { padding: .45rem .7rem; border-bottom: 1px solid #eee; font-size: .85rem; }
+        tr:nth-child(even) td { background: #faf8f2; }
+        .moy { background: #faf8f2; border: 2px solid #8B6914; border-radius: 8px;
+               padding: .8rem 1.2rem; display: inline-block; margin-bottom: 1rem; }
+        .moy .val { font-size: 1.5rem; font-weight: 700; color: #8B6914; }
+        .footer { margin-top: 2rem; font-size: .75rem; color: #999; border-top: 1px solid #eee;
+                  padding-top: .8rem; }
+        @media print { .no-print { display: none; } }
+      </style></head><body>
+      <h1>EST Salé — Relevé de notes officiel</h1>
+      <p class="sub">Généré le ${now}</p>
+      <div class="info">
+        <div><strong>Étudiant</strong>${escHtml(releve.etudiant_nom)}</div>
+        <div><strong>CNE</strong>${escHtml(releve.etudiant_cne)}</div>
+        <div><strong>N° Demande</strong>${releve.demande_id}</div>
+      </div>
+      <table>
+        <thead><tr><th>Élément</th><th style="text-align:center">Note / 20</th><th style="text-align:center">Résultat</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="moy">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:.2rem">Moyenne générale</div>
+        <div class="val">${moy} / 20</div>
+      </div>
+      <div class="footer">Document officiel — EST Salé / Université Mohammed V Rabat</div>
+      <div class="no-print" style="margin-top:1.5rem;text-align:center">
+        <button onclick="window.print()"
+          style="padding:.6rem 1.5rem;background:#8B6914;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.88rem">
+          🖨️ Imprimer / Enregistrer en PDF
+        </button>
+      </div>
+    </body></html>`;
+
+    // Ouvrir dans un nouvel onglet pour impression / enregistrement PDF
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank');
+    if (!win) showToast('Autorisez les popups pour télécharger le PDF', 'error');
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch { showToast('Erreur génération PDF', 'error'); }
+};
+
+window.verifierReleve = async function(demandeId, el) {
+  try {
+    const r = await api('GET', `/api/notes/etudiant/demandes-releve/${demandeId}`);
+    if (!r.ok) { showToast('Erreur vérification','error'); return; }
+    const d = await r.json();
+    // Mettre à jour le statut dans sessionStorage
+    const hist = JSON.parse(sessionStorage.getItem('releve_history')||'[]');
+    const idx = hist.findIndex(h=>h.id===demandeId);
+    if (idx>=0) { hist[idx].statut=d.statut; sessionStorage.setItem('releve_history',JSON.stringify(hist)); }
+
+    if (d.statut==='approuve') {
+      showToast('✅ Relevé approuvé ! Vous pouvez consulter vos notes.','success');
+      if(el) el.querySelector('button').textContent='✓ Approuvé';
+    } else if (d.statut==='rejete') {
+      showToast('❌ Relevé refusé : '+(d.motif_rejet||'sans motif'),'error');
+      if(el) el.querySelector('button').textContent='✗ Refusé';
+    } else {
+      showToast('Demande toujours en attente…','');
+    }
+    initRelevePanel();  // rafraîchir l'affichage
+  } catch { showToast('Erreur réseau','error'); }
+};
+
 /* ── Peupler selects relevé/classement avec les semestres réels ─── */
 async function initSemestreSelects() {
+  const sel = document.getElementById('releveSelect');
+  if (!sel) return;
   try {
     const rMe = await api('GET', '/api/notes/etudiant/me');
-    if (!rMe.ok) return;
+    if (!rMe.ok) {
+      sel.innerHTML = '<option value="">' + meErrMsg(rMe.status) + '</option>';
+      return;
+    }
     const me = await rMe.json();
     const rSems = await api('GET', `/api/calendar/filieres/${me.calendar_filiere_id}/semestres`);
-    if (!rSems.ok) return;
+    if (!rSems.ok) { sel.innerHTML = '<option value="">Erreur chargement</option>'; return; }
     const sems = await rSems.json();
-    if (!sems || !sems.length) return;
-    const opts = sems.map(s => `<option value="${s.id}">${escHtml(s.nom)}</option>`).join('');
-    ['releveSelect'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (sel) sel.innerHTML = opts;
-    });
-  } catch {}
+    if (!sems || !sems.length) {
+      sel.innerHTML = '<option value="">Aucun semestre disponible</option>';
+      return;
+    }
+    sel.innerHTML = sems.map(s => `<option value="${s.id}">${escHtml(s.nom)}</option>`).join('');
+  } catch {
+    sel.innerHTML = '<option value="">Erreur — réessayez</option>';
+  }
 }
 
 /* ── UTILS ────────────────────────────────────────────────────────── */
@@ -668,24 +946,36 @@ window.chatSearchUsers = function(q) {
   _chatSearchTimer = setTimeout(async () => {
     try {
       // Chercher uniquement les enseignants via ms-admin
-      const r = await api('GET', `/api/admin/users/?search=${encodeURIComponent(q)}&max=15`);
-      const users = r.ok ? await r.json() : [];
-      // Filtrer enseignants uniquement
-      const enseignants = (users || []).filter(u => (u.roles || []).includes('enseignant'));
-      if (!enseignants.length) {
+      // Route sécurisée : uniquement les enseignants de MA filière
+      // Accès réservé aux étudiants/délégués authentifiés — pas d'UUID Keycloak exposé
+      const r = await api('GET', '/api/notes/etudiant/enseignants-filiere');
+      const enseignants = r.ok ? (await r.json()) : [];
+      // Filtrer par nom/prénom selon la recherche
+      const q2 = q.toLowerCase();
+      const filtered = (enseignants || []).filter(e =>
+        (e.nom || '').toLowerCase().includes(q2) ||
+        (e.prenom || '').toLowerCase().includes(q2)
+      );
+      if (!filtered.length) {
         list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun enseignant trouvé.</div>';
         return;
       }
       _chatUsersCache = {};
-      list.innerHTML = enseignants.map(u => {
-        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
-        _chatUsersCache[u.id] = { id: u.id, name, roles: u.roles || [] };
-        return `<div onclick="selectChatUser('${u.id}')" data-uid="${u.id}"
-          style="padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--gold,#C9A84C);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
+      list.innerHTML = filtered.map(e => {
+        const name = `${e.prenom || ''} ${e.nom || ''}`.trim() || `Enseignant #${e.id}`;
+        const uid = e.user_id || '';
+        const peutChatter = e.peut_chatter && uid;
+        if (peutChatter) {
+          _chatUsersCache[uid] = { id: uid, name, roles: ['enseignant'] };
+        }
+        return `<div ${peutChatter ? `onclick="selectChatUser('${uid}')"` : ''} data-uid="${uid}"
+          style="padding:.6rem 1rem;${peutChatter ? 'cursor:pointer;' : 'opacity:.5;cursor:not-allowed;'}border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:${peutChatter ? 'var(--gold,#C9A84C)' : 'var(--border)'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
           <div>
             <div style="font-weight:600;font-size:.83rem">${escHtml(name)}</div>
-            <div style="font-size:.71rem;color:var(--muted)">${escHtml(u.email || u.username)}</div>
+            <div style="font-size:.71rem;color:var(--muted)">
+              ${peutChatter ? 'Enseignant · Disponible pour le chat' : 'Enseignant · Compte non lié — contacter l\'admin'}
+            </div>
           </div>
         </div>`;
       }).join('');

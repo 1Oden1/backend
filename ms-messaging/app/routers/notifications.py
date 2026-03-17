@@ -22,6 +22,7 @@ from app.schemas import (
     NotificationListResponse, AckResponse,
 )
 from app.services.notification_service import (
+    _insert_notification,
     get_notifications,
     mark_notification_read,
     mark_all_notifications_read,
@@ -162,3 +163,43 @@ async def emit_grades_available(
         "detail": f"Notification notes disponibles envoyée à {count} membre(s).",
         "count":  count,
     }
+
+
+# ── Notification directe inter-services ───────────────────────────────────────
+
+@router.post(
+    "/direct",
+    response_model=AckResponse,
+    status_code=202,
+    summary="[Interne] Envoyer une notification directe à un utilisateur spécifique",
+)
+async def send_direct_notification(
+    body: dict,
+    _user: dict = Depends(get_current_user),
+):
+    """
+    Envoie une notification à UN seul utilisateur identifié par son user_id Keycloak.
+    Utilisé par ms-notes après approbation d'une demande de relevé ou classement.
+    Body : { user_id, type, title, content, related_id? }
+    """
+    user_id    = body.get("user_id", "")
+    notif_type = body.get("type", "info")
+    title      = body.get("title", "Notification")
+    content_   = body.get("content", "")
+    related_id = body.get("related_id")
+
+    if not user_id:
+        raise HTTPException(400, "user_id requis.")
+
+    try:
+        _insert_notification(
+            recipient_id=user_id,
+            notif_type=notif_type,
+            title=title,
+            content=content_,
+            related_id=related_id,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Erreur insertion notification : {e}")
+
+    return {"detail": f"Notification envoyée à {user_id}.", "count": 1}

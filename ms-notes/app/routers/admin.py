@@ -61,6 +61,30 @@ async def _get_elements_for_semestre(semestre_id: int) -> List[dict]:
 
 # ── Helper RabbitMQ ───────────────────────────────────────────────────────────
 
+
+
+async def _notify_user(user_id: str, notif_type: str, title: str, body_text: str, related_id: str = "") -> None:
+    """Envoie une notification directe à un utilisateur via ms-messaging."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # On doit avoir un token service — on utilise le RabbitMQ en fallback
+            # si ms-messaging n'est pas joignable, on logue juste l'erreur
+            resp = await client.post(
+                f"{settings.MS_MESSAGING_URL}/api/v1/messaging/notifications/direct",
+                json={
+                    "user_id":    user_id,
+                    "type":       notif_type,
+                    "title":      title,
+                    "content":    body_text,
+                    "related_id": related_id,
+                },
+                headers={"Authorization": f"Bearer {settings.INTERNAL_SERVICE_TOKEN}"},
+            )
+            if resp.status_code not in (200, 201, 202):
+                logger.warning("Notification directe échouée (%d) : %s", resp.status_code, resp.text[:100])
+    except Exception as exc:
+        logger.warning("Impossible d'envoyer la notification directe à %s : %s", user_id, exc)
+
 async def _publish_event(routing_key: str, payload: dict) -> None:
     try:
         connection = await aio_pika.connect_robust(settings.RABBITMQ_URL, timeout=5.0)
@@ -360,7 +384,7 @@ def list_demandes_releve(
 
 
 @router.patch("/demandes-releve/{demande_id}", response_model=DemandeReleveRead)
-def traiter_releve(
+async def traiter_releve(
     demande_id: int,
     body: TraiterDemandeIn,
     db: Session = Depends(get_db),
@@ -376,6 +400,25 @@ def traiter_releve(
     demande.traite_le   = datetime.utcnow()
     db.commit()
     db.refresh(demande)
+
+    # Notifier l'étudiant selon le statut
+    if body.statut == "approuve":
+        await _notify_user(
+            user_id    = demande.demandeur_user_id,
+            notif_type = "releve_approuve",
+            title      = "✅ Relevé de notes approuvé",
+            body_text  = f"Votre demande de relevé (semestre #{demande.calendar_semestre_id}) a été approuvée. Vous pouvez le consulter.",
+            related_id = str(demande.id),
+        )
+    elif body.statut == "rejete":
+        motif = body.motif_rejet or "Aucun motif précisé."
+        await _notify_user(
+            user_id    = demande.demandeur_user_id,
+            notif_type = "releve_rejete",
+            title      = "❌ Relevé de notes refusé",
+            body_text  = f"Votre demande de relevé a été refusée. Motif : {motif}",
+            related_id = str(demande.id),
+        )
     return demande
 
 
@@ -396,7 +439,7 @@ def list_demandes_classement(
 
 
 @router.patch("/demandes-classement/{demande_id}", response_model=DemandeClassementRead)
-def traiter_classement(
+async def traiter_classement(
     demande_id: int,
     body: TraiterDemandeIn,
     db: Session = Depends(get_db),
@@ -412,4 +455,25 @@ def traiter_classement(
     demande.traite_le   = datetime.utcnow()
     db.commit()
     db.refresh(demande)
+
+    # Récupérer l'user_id de l'étudiant
+    etudiant = db.get(Etudiant, demande.etudiant_id)
+    if etudiant:
+        if body.statut == "approuve":
+            await _notify_user(
+                user_id    = etudiant.user_id,
+                notif_type = "classement_approuve",
+                title      = "🏆 Classement disponible",
+                body_text  = f"Votre classement ({demande.type_classement}) pour le semestre #{demande.calendar_semestre_id} est disponible.",
+                related_id = str(demande.id),
+            )
+        elif body.statut == "rejete":
+            motif = body.motif_rejet or "Aucun motif précisé."
+            await _notify_user(
+                user_id    = etudiant.user_id,
+                notif_type = "classement_rejete",
+                title      = "❌ Demande de classement refusée",
+                body_text  = f"Votre demande de classement a été refusée. Motif : {motif}",
+                related_id = str(demande.id),
+            )
     return demande

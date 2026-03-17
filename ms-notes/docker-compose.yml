@@ -17,6 +17,7 @@ services:
       RABBITMQ_URL:           amqp://ent_user:ent_password@ent_rabbitmq:5672/
       MS_CALENDAR_URL:        http://ent_ms_calendar:8000
       INTERNAL_SERVICE_TOKEN: ""   # à renseigner en production
+      MS_MESSAGING_URL:        http://ent_ms_messaging:8000
     ports:
       - "8005:8000"
     networks:

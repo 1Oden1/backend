@@ -263,12 +263,18 @@ def mon_classement(
             mon_rang, ma_moyenne = rang, moy
             break
 
+    # Étudiant absent (aucune note) → dernier rang, total inclut l'étudiant
+    total = len(moyennes)
+    if mon_rang == 0:
+        mon_rang = total + 1  # dernier
+        total    = total + 1  # le compte l'inclut
+
     return MonClassementOut(
         demande_id=demande.id,
         type_classement=type_classement,
         calendar_semestre_id=semestre_id,
         scope_nom=scope_nom,
-        total=len(moyennes),
+        total=total,
         mon_rang=mon_rang,
         ma_moyenne=ma_moyenne,
     )

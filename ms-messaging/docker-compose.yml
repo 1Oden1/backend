@@ -26,6 +26,8 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin_password
       KEYCLOAK_CLIENT_ID:      ent-backend
       JWT_ALGORITHM:           RS256
+      MS_NOTES_URL:            http://ent_ms_notes:8000
+      MS_CALENDAR_URL:         http://ent_ms_calendar:8000
     ports:
       - "8007:8000"
     volumes:
@@ -34,6 +36,8 @@ services:
       - ms-auth_default     # accès ent_mysql + ent_keycloak
       - ms-upload_default   # accès ent_cassandra
       - ent_rabbitmq_net    # accès ent_rabbitmq
+      - ms-notes_default    # accès ent_ms_notes
+      - ms-calendar_default # accès ent_ms_calendar
     depends_on:
       ent_rabbitmq:
         condition: service_healthy
@@ -69,3 +73,7 @@ networks:
     external: true
   ent_rabbitmq_net:
     name: ent_rabbitmq_net
+  ms-notes_default:
+    external: true
+  ms-calendar_default:
+    external: true

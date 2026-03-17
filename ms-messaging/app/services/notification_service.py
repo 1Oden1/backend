@@ -35,17 +35,17 @@ def _insert_notification(
         """
         INSERT INTO notifications
                (recipient_id, created_at, notification_id, type, title, content, related_id, is_read)
-        VALUES (:rid, :cat, :nid, :typ, :tit, :con, :rel, false)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, false)
         """,
-        {
-            "rid": recipient_id,
-            "cat": datetime.now(timezone.utc),
-            "nid": uuid.uuid4(),
-            "typ": notif_type,
-            "tit": title,
-            "con": content,
-            "rel": related_id or "",
-        },
+        (
+            recipient_id,
+            datetime.now(timezone.utc),
+            uuid.uuid4(),
+            notif_type,
+            title,
+            content,
+            related_id or "",
+        ),
     )
 
 
@@ -74,7 +74,7 @@ async def notify_filiere_event(payload: dict) -> int:
     Payload attendu : {"filiere_id": int, "title": str, "content": str}
     Destinataires   : étudiants + enseignants de la filière.
     """
-    from app.cache import get_students_of_filiere, get_teachers_of_filiere
+    from app.http_clients import get_students_of_filiere, get_teachers_of_filiere
 
     filiere_id = payload["filiere_id"]
     title      = payload["title"]
@@ -125,7 +125,7 @@ async def notify_grade_reminder(payload: dict) -> int:
     }
     Destinataires : enseignants de la filière (une semaine avant la date limite).
     """
-    from app.cache import get_teachers_of_filiere, get_filiere_name
+    from app.http_clients import get_teachers_of_filiere, get_filiere_name
 
     filiere_id      = payload["filiere_id"]
     semestre_id     = payload["semestre_id"]
@@ -152,7 +152,7 @@ async def notify_grades_available(payload: dict) -> int:
     Payload attendu : {"filiere_id": int, "semestre_id": int}
     Destinataires   : étudiants + enseignants de la filière.
     """
-    from app.cache import (
+    from app.http_clients import (
         get_students_of_filiere, get_teachers_of_filiere, get_filiere_name,
     )
 

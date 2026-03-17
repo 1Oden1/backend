@@ -81,6 +81,7 @@ require_etudiant   = require_role("etudiant")
 require_enseignant = require_role("enseignant")
 require_admin      = require_role("admin")
 
-# Aliases
-require_student = require_etudiant
+# Un délégué est un étudiant avec des droits supplémentaires
+# → il doit pouvoir accéder à toutes les routes étudiants
+require_student = require_role("etudiant", "delegue")
 require_teacher = require_enseignant

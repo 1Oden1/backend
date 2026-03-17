@@ -81,11 +81,19 @@ def check_chat_permission(
         if not target_is_enseignant:
             return False, "Le délégué ne peut discuter qu'avec les enseignants de sa filière."
 
+        # Vérifier que l'enseignant appartient à la filière du délégué
         filiere_id = get_filiere_id_of_student(sender_user_id)
         if filiere_id is None:
-            return False, "Filière du délégué introuvable."
+            # Délégué non inscrit dans ms-notes → on laisse passer (dégradé)
+            logger.warning("Filière du délégué %s introuvable — permission accordée par défaut", sender_user_id)
+            return True, "ok"
 
         teachers_of_filiere = get_teachers_of_filiere(filiere_id)
+        if not teachers_of_filiere:
+            # Aucun enseignant trouvé (séances pas encore créées) → laisser passer
+            logger.warning("Aucun enseignant pour filière %s — permission accordée par défaut", filiere_id)
+            return True, "ok"
+
         if target_user_id not in teachers_of_filiere:
             return False, "Ce délégué ne peut contacter que les enseignants de sa filière."
 

@@ -2,6 +2,7 @@
 Router enseignant — /api/v1/notes/enseignant
 Rôle requis : enseignant
 """
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -87,6 +88,18 @@ def demander_releve_etudiant(
     db.commit()
     db.refresh(demande)
     return demande
+
+
+@router.get("/mes-demandes-releve", response_model=List[DemandeReleveOut],
+            summary="Toutes mes demandes de relevé (en tant qu'enseignant)")
+def mes_demandes_releve_enseignant(
+    db:   Session = Depends(get_db),
+    user: dict    = Depends(require_teacher),
+):
+    """Liste toutes les demandes de relevé soumises par cet enseignant."""
+    return db.query(DemandeReleve).filter(
+        DemandeReleve.demandeur_user_id == user["sub"]
+    ).order_by(DemandeReleve.demande_le.desc()).all()
 
 
 @router.get("/demandes-releve/{demande_id}", response_model=DemandeReleveOut,

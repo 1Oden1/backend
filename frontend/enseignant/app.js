@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ENT Salé — Enseignant · app.js  (routes vérifiées sur backend réel)
+   ENT Salé — Enseignant · app.js
 ═══════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -20,9 +20,12 @@ function api(method, path, body) {
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const FILE_ICONS  = { cours:'📖', td:'✏️', tp:'🔬', examen:'📝', autre:'📄' };
 const TAG_CLASSES = { cours:'tag-cours', td:'tag-td', tp:'tag-tp', examen:'tag-examen', autre:'tag-autre' };
-const PANEL_TITLES = { accueil:'Tableau de bord', upload:'Déposer un fichier',
-                       mesfichiers:'Mes fichiers', emploi:'Mon planning',
-                       classement:'Classements filière', releve:'Relevés' };
+const PANEL_TITLES = {
+  accueil:'Tableau de bord', upload:'Déposer un fichier',
+  mesfichiers:'Mes fichiers', emploi:'Mon planning',
+  classement:'Classements filière', releve:'Relevés',
+  notifs:'Notifications', chat:'Messagerie'
+};
 let selectedFile = null;
 
 function escHtml(s) {
@@ -45,19 +48,23 @@ document.addEventListener('DOMContentLoaded', () => {
       switchPanel(el.dataset.panel, document.querySelector(`.nav-item[data-panel="${el.dataset.panel}"]`)); }));
 
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
-  document.getElementById('refreshMesBtn').addEventListener('click', loadMesFichiers);
-  document.getElementById('refreshEmploiBtn').addEventListener('click', () => loadEmploi(true));
-  document.getElementById('loadClassBtn').addEventListener('click', loadClassement);
-  document.getElementById('submitReleveBtn').addEventListener('click', demanderReleve);
-  document.getElementById('submitUploadBtn').addEventListener('click', doUpload);
+  document.getElementById('refreshMesBtn')?.addEventListener('click', loadMesFichiers);
+  document.getElementById('refreshEmploiBtn')?.addEventListener('click', () => loadEmploi(true));
+  document.getElementById('loadClassBtn')?.addEventListener('click', loadClassement);
+  document.getElementById('submitUploadBtn')?.addEventListener('click', doUpload);
+  document.getElementById('submitReleveBtn')?.addEventListener('click', demanderReleve);
 
   const dz = document.getElementById('dropzone');
-  dz.addEventListener('click', () => document.getElementById('fileInput').click());
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-  dz.addEventListener('drop', e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
-  document.getElementById('fileInput').addEventListener('change', e => setFile(e.target.files[0]));
+  if (dz) {
+    dz.addEventListener('click', () => document.getElementById('fileInput').click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
+    document.getElementById('fileInput').addEventListener('change', e => setFile(e.target.files[0]));
+  }
 
+  initClassSelects();
+  initReleveSelects();
   loadAccueil();
 });
 
@@ -72,6 +79,7 @@ function switchPanel(id, navEl) {
   if (id === 'emploi')      initEmploiPanel();
   if (id === 'notifs')      loadNotifs();
   if (id === 'chat')        loadEnsConversations();
+  if (id === 'releve')      initReleveHistory();
 }
 
 /* ── ACCUEIL ──────────────────────────────────────────────────────── */
@@ -79,14 +87,11 @@ async function loadAccueil() {
   const grid = document.getElementById('accueilGrid');
   if (!grid) return;
   grid.innerHTML = '<div class="loader"></div>';
-
-  // Charger fichiers + stats calendar en parallèle
   try {
     const [rFiles, rDepts] = await Promise.all([
       api('GET', '/api/download/my'),
       api('GET', '/api/calendar/departements'),
     ]);
-
     if (rFiles.ok) {
       const d = await rFiles.json();
       const files = d.files || [];
@@ -96,14 +101,11 @@ async function loadAccueil() {
     } else {
       grid.innerHTML = '<div class="empty"><div class="e-icon">📭</div><p>Aucun fichier déposé</p></div>';
     }
-
-    // Stats séances + filières depuis le calendrier
     if (rDepts.ok) {
       const depts = await rDepts.json();
       let totalFilieres = 0, totalSeances = 0;
       const myLastName  = (currentUser.last_name  || '').toLowerCase().trim();
       const myFirstName = (currentUser.first_name || '').toLowerCase().trim();
-
       await Promise.all((depts || []).map(async d => {
         const rF = await api('GET', `/api/calendar/departements/${d.id}/filieres`);
         if (!rF.ok) return;
@@ -117,23 +119,19 @@ async function loadAccueil() {
             const rE = await api('GET', `/api/calendar/emploi-du-temps/${s.id}`);
             if (!rE.ok) return;
             const ed = await rE.json();
-            const seances = (ed.seances || []).filter(sc =>
+            totalSeances += (ed.seances || []).filter(sc =>
               (sc.enseignant_nom    || '').toLowerCase().trim() === myLastName &&
               (sc.enseignant_prenom || '').toLowerCase().trim() === myFirstName
-            );
-            totalSeances += seances.length;
+            ).length;
           }));
         }));
       }));
-
       const nbS = document.getElementById('nbSeances');
-      const nbF = document.getElementById('nbFilières');
+      const nbF = document.getElementById('nbFilieres');
       if (nbS) nbS.textContent = totalSeances;
       if (nbF) nbF.textContent = totalFilieres;
     }
-  } catch(e) {
-    grid.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>';
-  }
+  } catch { grid.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>'; }
 }
 
 /* ── MES FICHIERS ─────────────────────────────────────────────────── */
@@ -199,37 +197,24 @@ async function doUpload() {
   const isPublic = document.getElementById('fPublic').value === 'true';
   const alertEl  = document.getElementById('uploadAlert');
   alertEl.innerHTML = '';
-
   if (!selectedFile) { alertEl.innerHTML = '<div class="alert alert-err">⚠ Sélectionnez un fichier.</div>'; return; }
   if (!title)        { alertEl.innerHTML = '<div class="alert alert-err">⚠ Titre obligatoire.</div>'; return; }
   if (!module)       { alertEl.innerHTML = '<div class="alert alert-err">⚠ Module obligatoire.</div>'; return; }
-
   const btn = document.getElementById('submitUploadBtn');
   btn.disabled = true; btn.textContent = '⏳ Envoi…';
-
   const pw = document.getElementById('progressWrap');
   const pb = document.getElementById('progressBar');
   const pl = document.getElementById('progressLabel');
   pw.style.display = 'block'; pb.style.width = '0';
-
   let prog = 0;
   const iv = setInterval(() => { prog = Math.min(prog + Math.random() * 15, 90); pb.style.width = prog + '%'; }, 300);
-
   const form = new FormData();
-  form.append('file',      selectedFile);
-  form.append('title',     title);
-  form.append('category',  category);
-  form.append('module',    module);
+  form.append('file', selectedFile); form.append('title', title);
+  form.append('category', category); form.append('module', module);
   form.append('is_public', isPublic);
   if (desc) form.append('description', desc);
-
   try {
-    // POST /api/upload/ — multipart/form-data (pas de Content-Type explicite)
-    const r = await fetch('/api/upload/', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
+    const r = await fetch('/api/upload/', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
     clearInterval(iv); pb.style.width = '100%';
     if (r.ok || r.status === 201) {
       pl.textContent = '✓ Upload terminé !';
@@ -253,16 +238,10 @@ async function doUpload() {
   } catch {
     clearInterval(iv);
     alertEl.innerHTML = '<div class="alert alert-err">✗ Erreur réseau.</div>';
-  } finally {
-    btn.disabled = false; btn.textContent = '📤 Déposer le fichier';
-  }
+  } finally { btn.disabled = false; btn.textContent = '📤 Déposer le fichier'; }
 }
 
-/* ── EMPLOI DU TEMPS ─ Cascade → GET /api/calendar/emploi-du-temps/{id} ── */
-// SeanceRead : { jour, heure_debut, heure_fin, element_module(str), type_seance, module(str),
-//               enseignant_nom, enseignant_prenom, salle(str) }
-// On filtre les séances de l'enseignant connecté par nom/prénom
-
+/* ── EMPLOI DU TEMPS ──────────────────────────────────────────────── */
 function initEmploiPanel() {
   const wrap = document.getElementById('emploiContent');
   if (!wrap || document.getElementById('emplDeptSel')) return;
@@ -283,8 +262,7 @@ function initEmploiPanel() {
           <option value="">— Choisir —</option></select></div>
       <div style="display:flex;flex-direction:column;gap:.3rem">
         <label style="font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">Afficher</label>
-        <select id="emplMode"
-          style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem">
+        <select id="emplMode" style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem">
           <option value="mine">Mes séances uniquement</option>
           <option value="all">Toutes les séances</option>
         </select>
@@ -292,7 +270,6 @@ function initEmploiPanel() {
       <button class="btn btn-gold" onclick="loadEmploi(false)" style="padding:.45rem 1.1rem;height:36px">Afficher</button>
     </div>
     <div id="emploiGrid"></div>`;
-
   api('GET','/api/calendar/departements').then(r=>r.ok?r.json():[]).then(list=>{
     const sel=document.getElementById('emplDeptSel');
     (list||[]).forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.nom;sel.appendChild(o);});
@@ -331,76 +308,75 @@ window.loadEmploi = async function(forceRefresh){
   grid.innerHTML='<div class="loader"></div>';
   try {
     const r=await api('GET',`/api/calendar/emploi-du-temps/${semId}`);
-    if(!r.ok){
-      const d=await r.json().catch(()=>({}));
-      grid.innerHTML=`<div class="empty"><div class="e-icon">📅</div><p>${escHtml(d.detail||'Planning non disponible.')}</p></div>`;
-      return;
-    }
+    if(!r.ok){const d=await r.json().catch(()=>({}));grid.innerHTML=`<div class="empty"><div class="e-icon">📅</div><p>${escHtml(d.detail||'Planning non disponible.')}</p></div>`;return;}
     const data=await r.json();
     let seances=data.seances||[];
-
-    // Filtrer par nom de l'enseignant connecté si mode "mine"
     if(mode==='mine'){
       const myLastName=(currentUser.last_name||'').toLowerCase().trim();
       const myFirstName=(currentUser.first_name||'').toLowerCase().trim();
       if(myLastName||myFirstName){
-        const filtered=seances.filter(s=>
-          (s.enseignant_nom||'').toLowerCase().trim()===myLastName &&
-          (s.enseignant_prenom||'').toLowerCase().trim()===myFirstName
-        );
-        // Si filtre trop restrictif (prénom/nom ne matche pas exactement), montrer tout avec avertissement
-        if(filtered.length===0 && seances.length>0){
-          grid.innerHTML=`<div class="empty" style="margin-bottom:1rem"><div class="e-icon">ℹ️</div>
-            <p>Aucune séance trouvée pour votre nom (<strong>${escHtml(currentUser.first_name||'')} ${escHtml(currentUser.last_name||'')}</strong>).<br>
-            Vérifiez que votre profil enseignant est bien enregistré dans le calendrier, ou sélectionnez "Toutes les séances".</p>
-          </div>`;
-          return;
+        const filtered=seances.filter(s=>(s.enseignant_nom||'').toLowerCase().trim()===myLastName&&(s.enseignant_prenom||'').toLowerCase().trim()===myFirstName);
+        if(filtered.length===0&&seances.length>0){
+          grid.innerHTML=`<div class="empty" style="margin-bottom:1rem"><div class="e-icon">ℹ️</div><p>Aucune séance pour <strong>${escHtml(currentUser.first_name||'')} ${escHtml(currentUser.last_name||'')}</strong>.<br>Sélectionnez "Toutes les séances".</p></div>`;return;
         }
         seances=filtered;
       }
     }
-
-    if(!seances.length){
-      grid.innerHTML='<div class="empty"><div class="e-icon">📅</div><p>Aucune séance pour ce semestre.</p></div>';
-      return;
-    }
-
-    let html=`<div style="padding:.6rem 1rem;background:var(--cream);border:1.5px solid var(--border);
-      border-radius:8px;margin-bottom:1rem;font-size:.83rem;color:var(--muted)">
-      🏛️ ${escHtml(data.departement||'')} &nbsp;·&nbsp; 🎓 ${escHtml(data.filiere||'')}
-      &nbsp;·&nbsp; 📆 ${escHtml(data.annee||'')} &nbsp;·&nbsp; 📘 ${escHtml(data.semestre||'')}
-      &nbsp;·&nbsp; ${seances.length} séance(s)
-    </div>`;
-
-    const byDay={};
-    seances.forEach(s=>{const j=s.jour||'Lundi';(byDay[j]=byDay[j]||[]).push(s);});
+    if(!seances.length){grid.innerHTML='<div class="empty"><div class="e-icon">📅</div><p>Aucune séance.</p></div>';return;}
+    let html=`<div style="padding:.6rem 1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;margin-bottom:1rem;font-size:.83rem;color:var(--muted)">
+      🏛️ ${escHtml(data.departement||'')} · 🎓 ${escHtml(data.filiere||'')} · 📆 ${escHtml(data.annee||'')} · 📘 ${escHtml(data.semestre||'')} · ${seances.length} séance(s)</div>`;
+    const byDay={};seances.forEach(s=>{const j=s.jour||'Lundi';(byDay[j]=byDay[j]||[]).push(s);});
     html+='<div class="schedule-wrap">';
     JOURS.filter(j=>byDay[j]).forEach(j=>{
       const sorted=byDay[j].sort((a,b)=>(a.heure_debut||'').localeCompare(b.heure_debut||''));
       html+=`<div class="day-block"><div class="day-label">${j}</div>`;
       sorted.forEach(s=>{
         const col=s.type_seance==='Cours'?'#1e4fa3':s.type_seance==='TD'?'#b45309':'#166534';
-        html+=`<div class="seance">
-          <div class="seance-time">${escHtml(s.heure_debut)} – ${escHtml(s.heure_fin)}</div>
-          <div style="flex:1">
-            <div class="seance-mod">${escHtml(s.element_module||s.module||'—')}</div>
-            <div class="seance-det">
-              <span style="background:${col};color:#fff;font-size:.68rem;padding:.1rem .45rem;border-radius:4px;margin-right:.4rem">${escHtml(s.type_seance||'')}</span>
-              📍 ${escHtml(s.salle||'—')} &nbsp;·&nbsp; 🎓 ${escHtml(data.filiere||'—')}
-            </div>
-          </div>
-        </div>`;
+        html+=`<div class="seance"><div class="seance-time">${escHtml(s.heure_debut)} – ${escHtml(s.heure_fin)}</div>
+          <div style="flex:1"><div class="seance-mod">${escHtml(s.element_module||s.module||'—')}</div>
+          <div class="seance-det"><span style="background:${col};color:#fff;font-size:.68rem;padding:.1rem .45rem;border-radius:4px;margin-right:.4rem">${escHtml(s.type_seance||'')}</span>
+          📍 ${escHtml(s.salle||'—')} · 🎓 ${escHtml(data.filiere||'—')}</div></div></div>`;
       });
       html+='</div>';
     });
     html+='</div>';
     grid.innerHTML=html;
-  } catch(err){
-    grid.innerHTML=`<div class="empty"><div class="e-icon">⚠️</div><p>Erreur : ${escHtml(err.message)}</p></div>`;
-  }
+  } catch(err){grid.innerHTML=`<div class="empty"><div class="e-icon">⚠️</div><p>Erreur : ${escHtml(err.message)}</p></div>`;}
 };
 
-/* ── CLASSEMENTS FILIÈRE ──────────────────────────────────────────── */
+/* ── CLASSEMENTS ──────────────────────────────────────────────────── */
+function initClassSelects() {
+  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(list => {
+    const sel = document.getElementById('clDept');
+    if (!sel) return;
+    (list || []).forEach(d => {
+      const o = document.createElement('option'); o.value = d.id; o.textContent = d.nom; sel.appendChild(o);
+    });
+  });
+}
+
+window.classOnDept = function() {
+  const dId = document.getElementById('clDept').value;
+  const fSel = document.getElementById('clFiliere'), sSel = document.getElementById('clSemestre');
+  fSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.innerHTML = '<option value="">— Choisir —</option>';
+  fSel.disabled = true; sSel.disabled = true;
+  if (!dId) return;
+  api('GET', `/api/calendar/departements/${dId}/filieres`).then(r => r.ok ? r.json() : []).then(list => {
+    fSel.disabled = false;
+    (list || []).forEach(f => { const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; fSel.appendChild(o); });
+  });
+};
+window.classOnFiliere = function() {
+  const fId = document.getElementById('clFiliere').value;
+  const sSel = document.getElementById('clSemestre');
+  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
+  if (!fId) return;
+  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
+    sSel.disabled = false;
+    (list || []).forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o); });
+  });
+};
+
 async function loadClassement() {
   const filiereId  = document.getElementById('clFiliere').value;
   const semestreId = document.getElementById('clSemestre').value;
@@ -408,15 +384,9 @@ async function loadClassement() {
   const wrap = document.getElementById('classementContent');
   wrap.innerHTML = '<div class="loader"></div>';
   try {
-    // GET /api/notes/enseignant/classements/filiere/{filiere_id}/semestre/{semestre_id}
-    // → ClassementCompletOut { scope_nom, total, classement:[{rang, cne, nom, moyenne}] }
     const r = await api('GET', `/api/notes/enseignant/classements/filiere/${filiereId}/semestre/${semestreId}`);
-    if (!r.ok) {
-      const d = await r.json().catch(()=>({}));
-      wrap.innerHTML = `<div class="empty"><div class="e-icon">📊</div><p>${escHtml(d.detail||'Classement non disponible')}</p></div>`;
-      return;
-    }
-    const d    = await r.json();
+    if (!r.ok) { const d = await r.json().catch(()=>({})); wrap.innerHTML = `<div class="empty"><div class="e-icon">📊</div><p>${escHtml(d.detail||'Classement non disponible')}</p></div>`; return; }
+    const d = await r.json();
     const list = d.classement || [];
     if (!list.length) { wrap.innerHTML = '<div class="empty"><div class="e-icon">🏆</div><p>Aucun étudiant</p></div>'; return; }
     wrap.innerHTML = `
@@ -426,36 +396,83 @@ async function loadClassement() {
         <tbody>${list.map(e => {
           const moy = e.moyenne != null ? parseFloat(e.moyenne) : null;
           const cls = moy === null ? '' : moy >= 12 ? 'note-ok' : moy >= 10 ? 'note-mid' : 'note-fail';
-          return `<tr>
-            <td><strong>${e.rang}</strong></td>
-            <td>${escHtml(e.cne||'—')}</td>
-            <td>${escHtml(e.nom||'—')}</td>
+          return `<tr><td><strong>${e.rang}</strong></td><td>${escHtml(e.cne||'—')}</td><td>${escHtml(e.nom||'—')}</td>
             <td class="${cls}">${moy!==null?moy.toFixed(2):'—'}</td>
-            <td>${moy===null?'—':moy>=10?'<span class="note-ok">✓ Admis</span>':'<span class="note-fail">✗ Ajourné</span>'}</td>
-          </tr>`;
+            <td>${moy===null?'—':moy>=10?'<span class="note-ok">✓ Admis</span>':'<span class="note-fail">✗ Ajourné</span>'}</td></tr>`;
         }).join('')}</tbody>
       </table></div>`;
   } catch { wrap.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>'; }
 }
 
-/* ── RELEVÉ ───────────────────────────────────────────────────────── */
+/* ── RELEVÉS ──────────────────────────────────────────────────────── */
+function initReleveSelects() {
+  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(depts => {
+    return Promise.all((depts || []).map(d =>
+      api('GET', `/api/calendar/departements/${d.id}/filieres`).then(r => r.ok ? r.json() : [])
+    ));
+  }).then(groups => {
+    const all = [].concat(...groups);
+    const sel = document.getElementById('rFiliere');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    all.forEach(f => { const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; sel.appendChild(o); });
+  });
+}
+
+window.releveOnFiliere = function() {
+  const fId = document.getElementById('rFiliere').value;
+  const sSel = document.getElementById('rSemestre'), eSel = document.getElementById('rEtudiantId');
+  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
+  eSel.innerHTML = '<option value="">— Choisir un semestre d\'abord —</option>'; eSel.disabled = true;
+  if (!fId) return;
+  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
+    sSel.disabled = false;
+    (list || []).forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o); });
+  });
+};
+
+window.releveOnSemestre = async function() {
+  const fId = document.getElementById('rFiliere').value;
+  const eSel = document.getElementById('rEtudiantId');
+  eSel.innerHTML = '<option value="">Chargement…</option>'; eSel.disabled = true;
+  if (!fId) return;
+  try {
+    const r = await api('GET', '/api/admin/notes/admin/etudiants');
+    if (!r.ok) throw new Error();
+    let list = await r.json();
+    if (!Array.isArray(list)) list = list.etudiants || [];
+    list = list.filter(e => String(e.calendar_filiere_id) === String(fId));
+    eSel.innerHTML = '<option value="">— Choisir un étudiant —</option>';
+    list.forEach(e => { const o = document.createElement('option'); o.value = e.id; o.textContent = `${e.prenom} ${e.nom} (${e.cne})`; eSel.appendChild(o); });
+    eSel.disabled = false;
+  } catch { eSel.innerHTML = '<option value="">Erreur chargement</option>'; }
+};
+
 async function demanderReleve() {
-  const semId    = parseInt(document.getElementById('rSemestre').value);
-  const res      = document.getElementById('releveResult');
-  const etudiantId = parseInt(document.getElementById('rEtudiantId')?.value || '0');
-  if (!semId || isNaN(semId)) { res.innerHTML = '<div class="alert alert-err">Sélectionnez un semestre.</div>'; return; }
+  const semId      = parseInt(document.getElementById('rSemestre').value);
+  const etudiantId = parseInt(document.getElementById('rEtudiantId').value);
+  const res        = document.getElementById('releveResult');
+  if (!semId || isNaN(semId))           { res.innerHTML = '<div class="alert alert-err">Sélectionnez un semestre.</div>'; return; }
   if (!etudiantId || isNaN(etudiantId)) { res.innerHTML = '<div class="alert alert-err">Sélectionnez un étudiant.</div>'; return; }
   try {
-    // POST /api/notes/enseignant/demandes-releve
-    // Body : { etudiant_id, calendar_semestre_id }
-    const r = await api('POST', '/api/notes/enseignant/demandes-releve', {
-      etudiant_id: etudiantId, calendar_semestre_id: semId,
-    });
+    const r = await api('POST', '/api/notes/enseignant/demandes-releve', { etudiant_id: etudiantId, calendar_semestre_id: semId });
     if (r.ok || r.status === 201) {
       const d = await r.json();
-      res.innerHTML = `<div class="alert alert-ok">✓ Demande envoyée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong></div>`;
+      // Sauvegarder en sessionStorage
+      const hist = JSON.parse(sessionStorage.getItem('ens_releve_history') || '[]');
+      if (!hist.find(h => h.id === d.id)) {
+        const semSel = document.getElementById('rSemestre');
+        const semNom = semSel ? semSel.options[semSel.selectedIndex]?.text : '';
+        const etSel  = document.getElementById('rEtudiantId');
+        const etNom  = etSel  ? etSel.options[etSel.selectedIndex]?.text  : '';
+        hist.unshift({ id: d.id, semNom, etNom, statut: d.statut });
+        sessionStorage.setItem('ens_releve_history', JSON.stringify(hist.slice(0, 20)));
+      }
+      res.innerHTML = `<div class="alert alert-ok">✓ Demande envoyée (ID: ${d.id}) · Statut : <strong>${d.statut}</strong><br>
+        <small>Vous serez notifié(e) dès la décision de l'admin.</small></div>`;
+      initReleveHistory();
     } else if (r.status === 409) {
-      res.innerHTML = '<div class="alert alert-ok">ℹ️ Une demande est déjà en attente.</div>';
+      res.innerHTML = '<div class="alert alert-ok">ℹ️ Une demande est déjà en attente pour cet étudiant et ce semestre.</div>';
     } else {
       const d = await r.json().catch(()=>({}));
       res.innerHTML = `<div class="alert alert-err">✗ ${escHtml(d.detail||`Erreur ${r.status}`)}</div>`;
@@ -463,22 +480,84 @@ async function demanderReleve() {
   } catch { res.innerHTML = '<div class="alert alert-err">✗ Erreur réseau.</div>'; }
 }
 
-/* ── UTILS ────────────────────────────────────────────────────────── */
-async function doLogout() {
-  const rt = localStorage.getItem('refresh_token');
-  if (rt) { try { await api('POST', '/api/auth/logout', { refresh_token: rt }); } catch {} }
-  localStorage.clear(); location.href = '/login/';
-}
-let _toastTimer;
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg; t.className = 'toast show ' + type;
-  clearTimeout(_toastTimer); _toastTimer = setTimeout(() => { t.className = 'toast'; }, 3200);
+async function initReleveHistory() {
+  const histWrap = document.getElementById('releveHistory');
+  if (!histWrap) return;
+  histWrap.innerHTML = '<div class="loader" style="margin:.5rem 0"></div>';
+  try {
+    const r = await api('GET', '/api/notes/enseignant/mes-demandes-releve');
+    if (!r.ok) { histWrap.innerHTML = ''; return; }
+    const demandes = await r.json();
+    if (!demandes || !demandes.length) { histWrap.innerHTML = ''; return; }
+    histWrap.innerHTML = '<div style="margin-top:1.5rem"><div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Mes demandes de relevés</div>'
+      + demandes.map(d => {
+          const date = d.demande_le ? new Date(d.demande_le).toLocaleDateString('fr-FR') : '';
+          const badgeClass = d.statut==='approuve'?'enseignant':d.statut==='rejete'?'admin':'etudiant';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;
+            background:var(--cream);border:1.5px solid var(--border);border-radius:8px;margin-bottom:.4rem">
+            <div>
+              <span style="font-weight:600;font-size:.83rem">Demande #${d.id}</span>
+              <span style="font-size:.75rem;color:var(--muted);margin-left:.5rem">Semestre #${d.calendar_semestre_id} · Étudiant #${d.etudiant_id}</span>
+              <span class="badge badge-${badgeClass}" style="margin-left:.4rem;font-size:.68rem">${escHtml(d.statut)}</span>
+              ${d.motif_rejet ? `<div style="font-size:.72rem;color:crimson">Motif : ${escHtml(d.motif_rejet)}</div>` : ''}
+              <span style="font-size:.71rem;color:var(--muted)">${date}</span>
+            </div>
+            <div style="display:flex;gap:.4rem">
+              ${d.statut==='approuve'
+                ? `<button class="btn btn-gold btn-sm" onclick="telechargerReleveEns(${d.id})">📄 PDF</button>`
+                : `<button class="btn btn-outline btn-sm" onclick="initReleveHistory()">↻</button>`}
+            </div>
+          </div>`;
+        }).join('')
+      + '</div>';
+  } catch { histWrap.innerHTML = ''; }
 }
 
+window.telechargerReleveEns = async function(demandeId) {
+  showToast('Génération du PDF…', '');
+  try {
+    const r = await api('GET', `/api/notes/enseignant/releves/${demandeId}`);
+    if (!r.ok) { const d = await r.json().catch(()=>({})); showToast('✗ '+(d.detail||`Erreur ${r.status}`),'error'); return; }
+    const releve = await r.json();
+    const notes = releve.notes || {};
+    const elts  = notes.notes || [];
+    const moy   = notes.moyenne_semestre != null ? parseFloat(notes.moyenne_semestre).toFixed(2) : '—';
+    const now   = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+    const rows  = elts.map(e => `<tr><td>Élément #${e.calendar_element_id}</td>
+      <td style="text-align:center">${e.note!=null?parseFloat(e.note).toFixed(2):'—'}</td>
+      <td style="text-align:center">${e.note!=null?(parseFloat(e.note)>=10?'✓':'✗'):'—'}</td></tr>`).join('');
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
+      <title>Relevé — ${escHtml(releve.etudiant_nom)}</title>
+      <style>body{font-family:Arial,sans-serif;margin:40px;color:#1a1a1a}h1{color:#8B6914;font-size:1.4rem}
+      table{width:100%;border-collapse:collapse;margin-bottom:1rem}th{background:#8B6914;color:#fff;padding:.5rem .7rem;text-align:left;font-size:.78rem}
+      td{padding:.45rem .7rem;border-bottom:1px solid #eee;font-size:.85rem}
+      .moy{background:#faf8f2;border:2px solid #8B6914;border-radius:8px;padding:.8rem 1.2rem;display:inline-block;margin-bottom:1rem}
+      .moy .val{font-size:1.5rem;font-weight:700;color:#8B6914}
+      @media print{.no-print{display:none}}</style></head><body>
+      <h1>EST Salé — Relevé de notes officiel</h1>
+      <p style="color:#666;font-size:.85rem">Généré le ${now}</p>
+      <div style="display:flex;gap:2rem;margin-bottom:1.5rem;font-size:.88rem">
+        <div><strong style="display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#888">Étudiant</strong>${escHtml(releve.etudiant_nom)}</div>
+        <div><strong style="display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#888">CNE</strong>${escHtml(releve.etudiant_cne)}</div>
+        <div><strong style="display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#888">N° Demande</strong>${releve.demande_id}</div>
+      </div>
+      <table><thead><tr><th>Élément</th><th style="text-align:center">Note / 20</th><th style="text-align:center">Résultat</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div class="moy"><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:.2rem">Moyenne</div>
+      <div class="val">${moy} / 20</div></div>
+      <div style="margin-top:2rem;font-size:.75rem;color:#999;border-top:1px solid #eee;padding-top:.8rem">Document officiel — EST Salé</div>
+      <div class="no-print" style="margin-top:1.5rem;text-align:center">
+        <button onclick="window.print()" style="padding:.6rem 1.5rem;background:#8B6914;color:#fff;border:none;border-radius:8px;cursor:pointer">🖨️ Imprimer / PDF</button>
+      </div></body></html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank');
+    if (!win) showToast('Autorisez les popups pour télécharger le PDF', 'error');
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch { showToast('Erreur génération PDF', 'error'); }
+};
 
-/* ── NOTIFICATIONS ─────────────────────────────────────────────────── */
+/* ── NOTIFICATIONS ────────────────────────────────────────────────── */
 async function loadNotifs() {
   const wrap = document.getElementById('notifsContent');
   if (!wrap) return;
@@ -488,16 +567,13 @@ async function loadNotifs() {
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     const list = d.notifications || [];
-    if (!list.length) {
-      wrap.innerHTML = '<div class="empty"><div class="e-icon">🔔</div><p>Aucune notification</p></div>';
-      return;
-    }
+    if (!list.length) { wrap.innerHTML = '<div class="empty"><div class="e-icon">🔔</div><p>Aucune notification</p></div>'; return; }
     wrap.innerHTML = list.map(n => `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" style="
         padding:.8rem 1rem;border-bottom:1px solid var(--border);display:flex;
-        gap:.8rem;align-items:flex-start;cursor:pointer" 
+        gap:.8rem;align-items:flex-start;cursor:pointer"
         onclick="markRead('${n.notification_id}', '${n.created_at}', this)">
-        <div style="font-size:1.3rem;flex-shrink:0">${n.type === 'schedule_update' ? '📅' : n.type === 'grade_reminder' ? '⏰' : '🔔'}</div>
+        <div style="font-size:1.3rem;flex-shrink:0">${n.type==='schedule_update'?'📅':n.type==='grade_reminder'?'⏰':n.type==='releve_approuve'?'✅':n.type==='releve_rejete'?'❌':'🔔'}</div>
         <div style="flex:1">
           <div style="font-weight:600;font-size:.85rem">${escHtml(n.title)}</div>
           <div style="font-size:.78rem;color:var(--muted);margin-top:.15rem">${escHtml(n.content)}</div>
@@ -505,9 +581,7 @@ async function loadNotifs() {
         </div>
         ${!n.is_read ? '<div style="width:8px;height:8px;background:var(--gold);border-radius:50%;flex-shrink:0;margin-top:4px"></div>' : ''}
       </div>`).join('');
-  } catch(e) {
-    wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><p>Erreur notifications (${e.message})</p></div>`;
-  }
+  } catch(e) { wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><p>Erreur notifications</p></div>`; }
 }
 
 window.markRead = async function(notifId, createdAt, el) {
@@ -527,114 +601,9 @@ async function markAllRead() {
   } catch { showToast('Erreur','error'); }
 }
 
-
-/* ── Cascades Classement ──────────────────────────────────────────── */
-(function initClassSelects() {
-  // Charger les départements au démarrage
-  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(list => {
-    const sel = document.getElementById('clDept');
-    if (!sel) return;
-    (list || []).forEach(d => {
-      const o = document.createElement('option'); o.value = d.id; o.textContent = d.nom; sel.appendChild(o);
-    });
-  });
-})();
-
-window.classOnDept = function() {
-  const dId = document.getElementById('clDept').value;
-  const fSel = document.getElementById('clFiliere');
-  const sSel = document.getElementById('clSemestre');
-  fSel.innerHTML = '<option value="">— Choisir —</option>';
-  sSel.innerHTML = '<option value="">— Choisir —</option>';
-  fSel.disabled = true; sSel.disabled = true;
-  if (!dId) return;
-  api('GET', `/api/calendar/departements/${dId}/filieres`).then(r => r.ok ? r.json() : []).then(list => {
-    fSel.disabled = false;
-    (list || []).forEach(f => {
-      const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; fSel.appendChild(o);
-    });
-  });
-};
-
-window.classOnFiliere = function() {
-  const fId = document.getElementById('clFiliere').value;
-  const sSel = document.getElementById('clSemestre');
-  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
-  if (!fId) return;
-  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
-    sSel.disabled = false;
-    (list || []).forEach(s => {
-      const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o);
-    });
-  });
-};
-
-/* ── Cascades Relevé ──────────────────────────────────────────────── */
-(function initReleveSelects() {
-  // Charger toutes les filières
-  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(depts => {
-    return Promise.all((depts || []).map(d =>
-      api('GET', `/api/calendar/departements/${d.id}/filieres`).then(r => r.ok ? r.json() : [])
-    ));
-  }).then(groups => {
-    const all = [].concat(...groups);
-    const sel = document.getElementById('rFiliere');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Choisir —</option>';
-    all.forEach(f => {
-      const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; sel.appendChild(o);
-    });
-  });
-})();
-
-window.releveOnFiliere = function() {
-  const fId = document.getElementById('rFiliere').value;
-  const sSel = document.getElementById('rSemestre');
-  const eSel = document.getElementById('rEtudiantId');
-  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
-  eSel.innerHTML = '<option value="">— Choisir d\'abord un semestre —</option>'; eSel.disabled = true;
-  if (!fId) return;
-  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
-    sSel.disabled = false;
-    (list || []).forEach(s => {
-      const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o);
-    });
-  });
-};
-
-window.releveOnSemestre = async function() {
-  const fId = document.getElementById('rFiliere').value;
-  const eSel = document.getElementById('rEtudiantId');
-  eSel.innerHTML = '<option value="">Chargement…</option>'; eSel.disabled = true;
-  if (!fId) return;
-  try {
-    const r = await api('GET', `/api/admin/notes/admin/etudiants`);
-    if (!r.ok) throw new Error();
-    let list = await r.json();
-    if (!Array.isArray(list)) list = list.etudiants || [];
-    list = list.filter(e => String(e.calendar_filiere_id) === String(fId));
-    eSel.innerHTML = '<option value="">— Choisir un étudiant —</option>';
-    list.forEach(e => {
-      const o = document.createElement('option');
-      o.value = e.id;
-      o.textContent = `${e.prenom} ${e.nom} (${e.cne})`;
-      eSel.appendChild(o);
-    });
-    eSel.disabled = false;
-  } catch {
-    eSel.innerHTML = '<option value="">Erreur chargement</option>';
-  }
-};
-
-
-/* ══════════════════════════════════════════════════════════════════
-   CHAT ENSEIGNANT — peut discuter avec les admins
-══════════════════════════════════════════════════════════════════ */
-var _ensSelectedUser  = null;
-var _ensChatCache     = {};
-var _ensPollTimer     = null;
-var _ensActiveChatId  = null;
-var _ensSearchTimer   = null;
+/* ── CHAT ─────────────────────────────────────────────────────────── */
+var _ensSelectedUser = null, _ensChatCache = {}, _ensPollTimer = null;
+var _ensActiveChatId = null, _ensSearchTimer = null;
 
 window.loadEnsConversations = async function() {
   const wrap = document.getElementById('ensConvItems');
@@ -651,16 +620,11 @@ window.loadEnsConversations = async function() {
     wrap.innerHTML = convs.map(c =>
       `<div class="conv-item" onclick="openEnsConv('${c.conversation_id}','${escHtml(c.other_user_name||'?')}')">
         <div class="conv-avatar">${(c.other_user_name||'?')[0].toUpperCase()}</div>
-        <div>
-          <div class="conv-name">${escHtml(c.other_user_name||'—')}</div>
-          <div class="conv-last">${c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR') : 'Aucun message'}</div>
-        </div>
+        <div><div class="conv-name">${escHtml(c.other_user_name||'—')}</div>
+        <div class="conv-last">${c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR') : 'Aucun message'}</div></div>
       </div>`
     ).join('');
-  } catch(e) {
-    wrap.innerHTML = `<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">⚠ Chat indisponible<br>
-      <button class="btn btn-outline btn-sm" style="margin-top:.5rem" onclick="loadEnsConversations()">↻ Réessayer</button></div>`;
-  }
+  } catch { wrap.innerHTML = `<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">⚠ Indisponible<br><button class="btn btn-outline btn-sm" style="margin-top:.5rem" onclick="loadEnsConversations()">↻</button></div>`; }
 };
 
 window.openEnsConv = function(convId, convName) {
@@ -739,24 +703,38 @@ window.ensChatSearchUsers = function(q) {
   list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
   _ensSearchTimer = setTimeout(async () => {
     try {
-      // L'enseignant peut contacter uniquement les admins
-      const r = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=20');
+      const r = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=50');
       const users = r.ok ? await r.json() : [];
-      const admins = (users || []).filter(u => (u.roles || []).includes('admin'));
-      if (!admins.length) {
-        list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun admin trouvé.</div>';
+      const myId = currentUser.id || '';
+      // Enseignants + admins + délégués — exclure soi-même et les étudiants simples
+      const targets = (users || []).filter(u => {
+        const roles = u.roles || [];
+        return u.id !== myId && (
+          roles.includes('enseignant') ||
+          roles.includes('admin')      ||
+          roles.includes('delegue')
+        );
+      });
+      if (!targets.length) {
+        list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun résultat.</div>';
         return;
       }
       _ensChatCache = {};
-      list.innerHTML = admins.map(u => {
+      list.innerHTML = targets.map(u => {
         const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
-        _ensChatCache[u.id] = { id: u.id, name, roles: u.roles || [] };
+        const roles = u.roles || [];
+        const isAdmin = roles.includes('admin');
+        const isDelegue = roles.includes('delegue');
+        const bg = isAdmin ? '#7c3aed' : isDelegue ? '#0369a1' : 'var(--gold,#C9A84C)';
+        const roleLabel = isAdmin ? '👑 Admin' : isDelegue ? '🎖 Délégué' : '🎓 Enseignant';
+        _ensChatCache[u.id] = { id: u.id, name, roles };
         return `<div onclick="selectEnsUser('${u.id}')" data-uid="${u.id}"
           style="padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
-          <div style="width:32px;height:32px;border-radius:50%;background:#7c3aed;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
           <div>
             <div style="font-weight:600;font-size:.83rem">${escHtml(name)}</div>
-            <div style="font-size:.71rem;color:var(--muted)">👑 Admin</div>
+            <div style="font-size:.71rem;color:var(--muted)">${escHtml(u.email || u.username)}</div>
+            <div style="font-size:.69rem;margin-top:.1rem">${roleLabel}</div>
           </div>
         </div>`;
       }).join('');
@@ -799,3 +777,17 @@ window.startEnsChatConv = async function() {
   } catch { showToast('Erreur réseau', 'error'); }
   finally { if (btn) { btn.disabled = false; btn.textContent = 'Démarrer'; } }
 };
+
+/* ── UTILS ────────────────────────────────────────────────────────── */
+async function doLogout() {
+  const rt = localStorage.getItem('refresh_token');
+  if (rt) { try { await api('POST', '/api/auth/logout', { refresh_token: rt }); } catch {} }
+  localStorage.clear(); location.href = '/login/';
+}
+let _toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(_toastTimer); _toastTimer = setTimeout(() => { t.className = 'toast'; }, 3200);
+}

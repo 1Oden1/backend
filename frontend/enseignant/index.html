@@ -106,7 +106,7 @@
         <div class="stats-strip">
           <div class="stat-mini"><span class="sm-icon">📁</span><div><div class="sm-val" id="nbMesFichiers">—</div><div class="sm-lbl">Mes fichiers</div></div></div>
           <div class="stat-mini"><span class="sm-icon">📅</span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances</div></div></div>
-          <div class="stat-mini"><span class="sm-icon">👥</span><div><div class="sm-val" id="nbFilières">—</div><div class="sm-lbl">Filières</div></div></div>
+          <div class="stat-mini"><span class="sm-icon">👥</span><div><div class="sm-val" id="nbFilieres">—</div><div class="sm-lbl">Filières</div></div></div>
         </div>
         <div class="section-head"><h3 class="section-title">Mes derniers fichiers déposés</h3><a href="#" class="link-more" data-panel="upload">+ Déposer →</a></div>
         <div class="cards-grid" id="accueilGrid"></div>
@@ -239,6 +239,7 @@
           <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.72rem;margin-top:.5rem">Envoyer la demande</button>
           <div id="releveResult" style="margin-top:1rem"></div>
         </div>
+        <div id="releveHistory"></div>
       </section>
 
       <!-- NOTIFICATIONS -->
@@ -275,7 +276,7 @@
           <div style="background:#fff;border-radius:14px;padding:1.5rem;width:min(440px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.2)">
             <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:1rem">Nouvelle conversation</h3>
             <div style="margin-bottom:.8rem">
-              <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.3rem">Rechercher un admin</label>
+              <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.3rem">Rechercher un enseignant, admin ou délégué</label>
               <input type="text" id="ensChatSearch" placeholder="Nom ou prénom…" oninput="ensChatSearchUsers(this.value)"
                 style="width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif;font-size:.85rem;outline:none;box-sizing:border-box"/>
             </div>

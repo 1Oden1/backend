@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENT EST-Salé — Calendrier</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark:  #0a2d6e;
+    --blue-main:  #1255cc;
+    --blue-mid:   #1a6fd4;
+    --blue-pale:  #e8f2ff;
+    --white:      #ffffff;
+    --gray-bg:    #f0f4fb;
+    --gray-soft:  #f7f9fc;
+    --gray-text:  #6b7a99;
+    --border:     #dde6f5;
+    --green:      #16a34a;
+    --green-pale: #f0fdf4;
+    --orange:     #ea580c;
+    --orange-pale:#fff7ed;
+    --red:        #dc2626;
+    --red-pale:   #fef2f2;
+    --purple:     #7c3aed;
+    --purple-pale:#f5f3ff;
+    --sidebar-w:  260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Outfit', sans-serif; background: var(--gray-bg); color: #1e2d4a; display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar { width: var(--sidebar-w); background: var(--blue-dark); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+  .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; }
+  .sidebar-logo-icon { width: 42px; height: 42px; background: var(--blue-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .sidebar-logo-text strong { color: white; font-size: 0.9rem; font-weight: 700; display: block; }
+  .sidebar-logo-text span { color: rgba(255,255,255,0.45); font-size: 0.7rem; }
+  .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+  .nav-section { margin-bottom: 24px; }
+  .nav-section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.35); padding: 0 8px; margin-bottom: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; margin-bottom: 2px; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .nav-item.active { background: var(--blue-main); color: white; }
+  .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.07); }
+  .sidebar-user-avatar { width: 36px; height: 36px; background: var(--blue-main); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .sidebar-user-info { flex: 1; min-width: 0; }
+  .sidebar-user-info strong { color: white; font-size: 0.83rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-user-info span { color: rgba(255,255,255,0.45); font-size: 0.7rem; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; transition: color 0.2s; }
+  .logout-btn:hover { color: #ff6b6b; }
+
+  /* MAIN */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  .topbar { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar-left h1 { font-size: 1.1rem; font-weight: 700; color: var(--blue-dark); }
+  .topbar-left p { font-size: 0.78rem; color: var(--gray-text); margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .btn-add { display: flex; align-items: center; gap: 8px; padding: 9px 18px; background: var(--blue-main); color: white; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-add:hover { background: var(--blue-mid); transform: translateY(-1px); }
+
+  .content { padding: 28px 32px; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+
+  /* LAYOUT */
+  .calendar-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; flex: 1; }
+
+  /* CALENDAR CARD */
+  .calendar-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px; animation: fadeUp 0.4s ease both; }
+
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .cal-nav h2 { font-size: 1.1rem; font-weight: 700; color: var(--blue-dark); }
+  .cal-nav-btn { width: 34px; height: 34px; background: var(--gray-soft); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all 0.2s; }
+  .cal-nav-btn:hover { background: var(--blue-pale); border-color: var(--blue-main); }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day-name { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--gray-text); text-transform: uppercase; padding: 8px 0; }
+  .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; transition: all 0.15s; position: relative; font-size: 0.88rem; font-weight: 500; }
+  .cal-day:hover { background: var(--blue-pale); }
+  .cal-day.other-month { color: #c0c8d8; }
+  .cal-day.today { background: var(--blue-main); color: white; font-weight: 700; }
+  .cal-day.today:hover { background: var(--blue-mid); }
+  .cal-day.selected { background: var(--blue-pale); color: var(--blue-main); font-weight: 700; border: 2px solid var(--blue-main); }
+  .cal-day.has-event::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
+  .cal-day.today.has-event::after { background: white; }
+
+  /* EVENTS SIDEBAR */
+  .events-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .upcoming-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 20px; animation: fadeUp 0.4s 0.1s ease both; }
+  .upcoming-card h3 { font-size: 0.9rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 16px; }
+
+  .event-item { display: flex; gap: 12px; padding: 12px; border-radius: 10px; background: var(--gray-soft); margin-bottom: 10px; cursor: pointer; transition: all 0.2s; border-left: 3px solid var(--blue-main); }
+  .event-item:last-child { margin-bottom: 0; }
+  .event-item:hover { background: var(--blue-pale); }
+  .event-item.examen { border-left-color: var(--red); }
+  .event-item.cours { border-left-color: var(--blue-main); }
+  .event-item.reunion { border-left-color: var(--purple); }
+  .event-item.conge { border-left-color: var(--green); }
+  .event-item.autre { border-left-color: var(--orange); }
+
+  .event-date-badge { width: 40px; flex-shrink: 0; text-align: center; }
+  .event-date-badge .day { font-size: 1.2rem; font-weight: 700; color: var(--blue-dark); line-height: 1; }
+  .event-date-badge .month { font-size: 0.65rem; color: var(--gray-text); text-transform: uppercase; }
+  .event-info { flex: 1; min-width: 0; }
+  .event-title { font-size: 0.83rem; font-weight: 600; color: var(--blue-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .event-meta { font-size: 0.72rem; color: var(--gray-text); margin-top: 3px; }
+  .event-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .event-type-dot.examen { background: var(--red); }
+  .event-type-dot.cours { background: var(--blue-main); }
+  .event-type-dot.reunion { background: var(--purple); }
+  .event-type-dot.conge { background: var(--green); }
+  .event-type-dot.autre { background: var(--orange); }
+
+  /* SELECTED DAY EVENTS */
+  .day-events-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 20px; animation: fadeUp 0.4s 0.15s ease both; }
+  .day-events-card h3 { font-size: 0.9rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 12px; }
+  .no-events { text-align: center; padding: 20px; color: var(--gray-text); font-size: 0.82rem; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,45,110,0.5); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border-radius: 20px; padding: 32px; width: 480px; max-width: 95vw; box-shadow: 0 32px 80px rgba(10,45,110,0.2); animation: fadeUp 0.3s ease; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--blue-dark); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.5; }
+  .modal-close:hover { opacity: 1; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--blue-dark); margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--blue-dark); background: var(--gray-soft); outline: none; transition: all 0.2s; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--blue-main); background: var(--white); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 12px; margin-top: 24px; }
+  .btn-cancel { flex: 1; padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: none; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--gray-text); }
+  .btn-submit { flex: 2; padding: 11px; background: var(--blue-main); color: white; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.15); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 300; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--green); color: white; }
+  .toast.error { background: var(--red); color: white; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🎓</div>
+    <div class="sidebar-logo-text"><strong>ENT EST-Salé</strong><span>Espace Numérique de Travail</span></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏠</span> Tableau de bord</a>
+      <a class="nav-item" href="courses.html"><span class="nav-icon">📚</span> Cours en ligne</a>
+      <a class="nav-item active" href="calendar.html"><span class="nav-icon">📅</span> Calendrier</a>
+      <a class="nav-item" href="notes.html"><span class="nav-icon">📊</span> Notes & Résultats</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Communication</div>
+      <a class="nav-item" href="messaging.html"><span class="nav-icon">✉️</span> Messagerie</a>
+      <a class="nav-item" href="notifications.html"><span class="nav-icon">🔔</span> Notifications</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Outils</div>
+      <a class="nav-item" href="ai.html"><span class="nav-icon">🤖</span> Assistant IA</a>
+      <a class="nav-item admin-only" href="admin.html" style="display:none"><span class="nav-icon">⚙️</span> Administration</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">👤</div>
+      <div class="sidebar-user-info">
+        <strong id="user-name">...</strong>
+        <span id="user-role">...</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">🚪</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>📅 Calendrier</h1>
+      <p>Événements et planning académique</p>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-add enseignant-only" style="display:none" onclick="openModal()">➕ Ajouter un événement</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="calendar-layout">
+      <!-- CALENDAR -->
+      <div class="calendar-card">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">◀</button>
+          <h2 id="cal-month-title">Chargement...</h2>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">▶</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <!-- SIDEBAR EVENTS -->
+      <div class="events-sidebar">
+        <div class="upcoming-card">
+          <h3>📌 Prochains événements</h3>
+          <div id="upcoming-list"><div style="text-align:center;padding:20px;color:var(--gray-text);font-size:0.82rem">⏳ Chargement...</div></div>
+        </div>
+        <div class="day-events-card">
+          <h3 id="day-events-title">📅 Événements du jour</h3>
+          <div id="day-events-list"><div class="no-events">Cliquez sur un jour pour voir ses événements</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ Ajouter un événement</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Titre *</label>
+      <input type="text" id="ev-titre" placeholder="Ex: Examen de Mathématiques">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="ev-desc" rows="2" placeholder="Description optionnelle..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" id="ev-date">
+      </div>
+      <div class="form-group">
+        <label>Heure</label>
+        <input type="time" id="ev-heure">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="ev-type">
+          <option value="cours">📚 Cours</option>
+          <option value="examen">📝 Examen</option>
+          <option value="reunion">👥 Réunion</option>
+          <option value="conge">🏖️ Congé</option>
+          <option value="autre">📌 Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lieu</label>
+        <input type="text" id="ev-lieu" placeholder="Ex: Salle A101">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-submit" id="ev-submit" onclick="addEvent()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../js/calendar.js"></script>
+</body>
+</html>

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENT EST-Salé — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark:   #0a2d6e;
+    --blue-main:   #1255cc;
+    --blue-mid:    #1a6fd4;
+    --blue-light:  #4a9eed;
+    --blue-pale:   #e8f2ff;
+    --white:       #ffffff;
+    --gray-soft:   #f4f7fc;
+    --gray-border: #d0dff0;
+    --gray-text:   #6b7a99;
+    --green:       #16a34a;
+    --red:         #dc2626;
+    --shadow-card: 0 24px 64px rgba(10,45,110,0.14), 0 4px 16px rgba(10,45,110,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    background: var(--blue-dark);
+    display: flex;
+    align-items: stretch;
+    overflow-y: auto;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    flex: 1;
+    background: linear-gradient(145deg, #0a2d6e 0%, #1255cc 50%, #1a6fd4 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 50px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 400px; height: 400px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+
+  .uni-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .uni-logo-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    backdrop-filter: blur(8px);
+  }
+
+  .uni-logo-text { color: white; }
+  .uni-logo-text .uni-name {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    opacity: 0.9;
+    line-height: 1.3;
+  }
+  .uni-logo-text .uni-sub {
+    font-size: 0.72rem;
+    opacity: 0.65;
+    margin-top: 2px;
+  }
+
+  .left-title {
+    color: white;
+    text-align: center;
+    animation: fadeUp 0.8s 0.2s ease both;
+    margin-bottom: 20px;
+  }
+  .left-title h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .left-title h1 span { color: #7ec8ff; }
+  .left-title p {
+    font-size: 1rem;
+    opacity: 0.75;
+    line-height: 1.6;
+    max-width: 360px;
+  }
+
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 380px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px 14px;
+    backdrop-filter: blur(8px);
+    transition: background 0.2s;
+  }
+  .feature-item:hover { background: rgba(255,255,255,0.13); }
+  .feature-icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .feature-text { color: white; }
+  .feature-text strong { font-size: 0.88rem; font-weight: 600; display: block; }
+  .feature-text span { font-size: 0.75rem; opacity: 0.65; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 480px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 48px;
+    position: relative;
+    box-shadow: -20px 0 60px rgba(0,0,0,0.2);
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 36px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .login-header .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--blue-pale);
+    color: var(--blue-main);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .login-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--blue-dark);
+    margin-bottom: 8px;
+  }
+  .login-header p {
+    font-size: 0.88rem;
+    color: var(--gray-text);
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--gray-soft);
+    border-radius: 10px;
+    padding: 4px;
+    width: 100%;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--gray-text);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .tab-btn.active {
+    background: var(--white);
+    color: var(--blue-main);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(18,85,204,0.12);
+  }
+
+  /* FORM */
+  .form-group {
+    width: 100%;
+    margin-bottom: 18px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--blue-dark);
+    margin-bottom: 7px;
+  }
+  .input-wrap {
+    position: relative;
+  }
+  .input-wrap .input-icon {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.93rem;
+    color: var(--blue-dark);
+    background: var(--gray-soft);
+    transition: all 0.2s;
+    outline: none;
+  }
+  .input-wrap input:focus {
+    border-color: var(--blue-main);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(18,85,204,0.1);
+  }
+  .input-wrap input::placeholder { color: #aab4c8; }
+
+  .toggle-password {
+    position: absolute;
+    right: 14px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    cursor: pointer; font-size: 16px;
+    opacity: 0.4; transition: opacity 0.2s;
+  }
+  .toggle-password:hover { opacity: 0.8; }
+
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .remember-me {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--gray-text); cursor: pointer;
+  }
+  .remember-me input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--blue-main);
+    cursor: pointer;
+  }
+  .forgot-link {
+    font-size: 0.82rem;
+    color: var(--blue-main);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .forgot-link:hover { text-decoration: underline; }
+
+  .btn-login {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--blue-main), var(--blue-mid));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    animation: fadeUp 0.6s 0.35s ease both;
+    position: relative;
+    overflow-y: auto;
+  }
+  .btn-login:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(18,85,204,0.35);
+  }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login.loading { pointer-events: none; }
+  .btn-login .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn-login.loading .spinner { display: block; }
+  .btn-login.loading .btn-text { display: none; }
+
+  /* ALERT */
+  .alert {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.83rem;
+    margin-bottom: 18px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    animation: fadeUp 0.3s ease both;
+  }
+  .alert.error { background: #fef2f2; border: 1px solid #fca5a5; color: var(--red); display: flex; }
+  .alert.success { background: #f0fdf4; border: 1px solid #86efac; color: var(--green); display: flex; }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; margin: 20px 0;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .divider hr { flex: 1; border: none; border-top: 1px solid var(--gray-border); }
+  .divider span { font-size: 0.75rem; color: var(--gray-text); white-space: nowrap; }
+
+  .new-account {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--gray-text);
+    animation: fadeUp 0.6s 0.45s ease both;
+  }
+  .new-account a {
+    color: var(--blue-main);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .new-account a:hover { text-decoration: underline; }
+
+  .footer-note {
+    position: absolute;
+    bottom: 24px;
+    font-size: 0.72rem;
+    color: var(--gray-text);
+    text-align: center;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .left-panel { display: none; }
+    .right-panel { width: 100%; padding: 40px 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left-panel">
+  <div class="uni-logo">
+    <div class="uni-logo-icon">🎓</div>
+    <div class="uni-logo-text">
+      <div class="uni-name">جامعة محمد الخامس بالرباط<br>المدرسة العليا للتكنولوجيا بسلا</div>
+      <div class="uni-sub">EST-Salé · Université Mohammed V</div>
+    </div>
+  </div>
+
+  <div class="left-title">
+    <h1>Espace Numérique<br>de <span>Travail</span></h1>
+    <p>Plateforme unifiée pour étudiants, enseignants et administrateurs de l'EST-Salé.</p>
+  </div>
+
+  <div class="features">
+    <div class="feature-item">
+      <div class="feature-icon">📚</div>
+      <div class="feature-text">
+        <strong>Cours en ligne</strong>
+        <span>Accédez à vos ressources pédagogiques</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">📅</div>
+      <div class="feature-text">
+        <strong>Calendrier & Examens</strong>
+        <span>Consultez votre emploi du temps</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-text">
+        <strong>Assistant IA</strong>
+        <span>Powered by Ollama · Llama 3</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">✉️</div>
+      <div class="feature-text">
+        <strong>Messagerie interne</strong>
+        <span>Communiquez avec votre équipe</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+
+  <div class="login-header">
+    <div class="badge">🔒 Connexion sécurisée</div>
+    <h2>Bienvenue</h2>
+    <p>Connectez-vous à votre espace numérique</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('login')">Se connecter</button>
+    <button class="tab-btn" onclick="setTab('help')">Besoin d'aide ?</button>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div id="tab-login" style="width:100%">
+    <div class="alert" id="alert-box">
+      <span id="alert-icon">⚠️</span>
+      <span id="alert-msg"></span>
+    </div>
+
+    <div class="form-group">
+      <label>Nom d'utilisateur</label>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input type="text" id="username" placeholder="Entrez votre identifiant" autocomplete="username">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <div class="input-wrap">
+        <span class="input-icon">🔑</span>
+        <input type="password" id="password" placeholder="Entrez votre mot de passe" autocomplete="current-password">
+        <button class="toggle-password" onclick="togglePassword()" type="button" id="toggle-btn">👁️</button>
+      </div>
+    </div>
+
+    <div class="form-options">
+      <label class="remember-me">
+        <input type="checkbox" id="remember"> Se souvenir de moi
+      </label>
+      <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+    </div>
+
+    <button class="btn-login" id="login-btn" onclick="handleLogin()">
+      <div class="spinner"></div>
+      <span class="btn-text">Se connecter →</span>
+    </button>
+
+    <div class="divider">
+      <hr><span>Nouveau à l'université ?</span><hr>
+    </div>
+
+    <div class="new-account">
+      Validez votre compte : <a href="#">Première connexion</a>
+    </div>
+  </div>
+
+  <!-- HELP TAB -->
+  <div id="tab-help" style="width:100%; display:none;">
+    <div style="text-align:center; padding: 20px 0;">
+      <div style="font-size: 48px; margin-bottom: 16px;">📞</div>
+      <h3 style="color: var(--blue-dark); margin-bottom: 8px;">Support technique</h3>
+      <p style="color: var(--gray-text); font-size: 0.88rem; margin-bottom: 24px;">Contactez l'équipe informatique de l'EST-Salé</p>
+      <div style="background: var(--blue-pale); border-radius: 12px; padding: 20px; text-align: left;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <span>📧</span>
+          <div>
+            <div style="font-size:0.75rem; color:var(--gray-text)">Email</div>
+            <div style="font-size:0.88rem; font-weight:600; color:var(--blue-dark)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6b181e1b1b04191f2b0e181f46180a070e450a0845060a">[email&#160;protected]</a></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span>📱</span>
+          <div>
+            <div style="font-size:0.75rem; color:var(--gray-text)">Téléphone</div>
+            <div style="font-size:0.88rem; font-weight:600; color:var(--blue-dark)">0537 88 15 61</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    ENT EST-Salé © 2026 · Université Mohammed V Rabat
+  </div>
+</div>
+
+<script src="../js/auth.js"></script>
+</body>
+</html>

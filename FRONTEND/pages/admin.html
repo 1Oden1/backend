@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENT EST-Salé — Administration</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark:  #0a2d6e;
+    --blue-main:  #1255cc;
+    --blue-mid:   #1a6fd4;
+    --blue-pale:  #e8f2ff;
+    --white:      #ffffff;
+    --gray-bg:    #f0f4fb;
+    --gray-soft:  #f7f9fc;
+    --gray-text:  #6b7a99;
+    --border:     #dde6f5;
+    --green:      #16a34a;
+    --green-pale: #f0fdf4;
+    --orange:     #ea580c;
+    --orange-pale:#fff7ed;
+    --red:        #dc2626;
+    --red-pale:   #fef2f2;
+    --purple:     #7c3aed;
+    --purple-pale:#f5f3ff;
+    --sidebar-w:  260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Outfit', sans-serif; background: var(--gray-bg); color: #1e2d4a; display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar { width: var(--sidebar-w); background: var(--blue-dark); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+  .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; }
+  .sidebar-logo-icon { width: 42px; height: 42px; background: var(--blue-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .sidebar-logo-text strong { color: white; font-size: 0.9rem; font-weight: 700; display: block; }
+  .sidebar-logo-text span { color: rgba(255,255,255,0.45); font-size: 0.7rem; }
+  .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+  .nav-section { margin-bottom: 24px; }
+  .nav-section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.35); padding: 0 8px; margin-bottom: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; margin-bottom: 2px; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .nav-item.active { background: var(--blue-main); color: white; }
+  .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.07); }
+  .sidebar-user-avatar { width: 36px; height: 36px; background: var(--blue-main); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .sidebar-user-info { flex: 1; min-width: 0; }
+  .sidebar-user-info strong { color: white; font-size: 0.83rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-user-info span { color: rgba(255,255,255,0.45); font-size: 0.7rem; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; transition: color 0.2s; }
+  .logout-btn:hover { color: #ff6b6b; }
+
+  /* MAIN */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  .topbar { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar-left h1 { font-size: 1.1rem; font-weight: 700; color: var(--blue-dark); }
+  .topbar-left p { font-size: 0.78rem; color: var(--gray-text); margin-top: 1px; }
+  .btn-add { display: flex; align-items: center; gap: 8px; padding: 9px 18px; background: var(--blue-main); color: white; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-add:hover { background: var(--blue-mid); transform: translateY(-1px); }
+
+  .content { padding: 28px 32px; flex: 1; }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 16px; animation: fadeUp 0.4s ease both; transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(10,45,110,0.08); }
+  .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .stat-icon.blue   { background: var(--blue-pale); }
+  .stat-icon.green  { background: var(--green-pale); }
+  .stat-icon.orange { background: var(--orange-pale); }
+  .stat-icon.purple { background: var(--purple-pale); }
+  .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--blue-dark); line-height: 1; }
+  .stat-label { font-size: 0.75rem; color: var(--gray-text); margin-top: 4px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 20px; width: fit-content; }
+  .tab { padding: 8px 20px; border-radius: 9px; border: none; background: none; font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: 500; color: var(--gray-text); cursor: pointer; transition: all 0.2s; }
+  .tab.active { background: var(--blue-main); color: white; font-weight: 600; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 220px; position: relative; }
+  .search-wrap input { width: 100%; padding: 10px 16px 10px 38px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; background: var(--white); color: var(--blue-dark); outline: none; transition: all 0.2s; }
+  .search-wrap input:focus { border-color: var(--blue-main); box-shadow: 0 0 0 3px rgba(18,85,204,0.08); }
+  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.4; }
+  .filter-select { padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--blue-dark); background: var(--white); cursor: pointer; outline: none; }
+
+  /* TABLE */
+  .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; animation: fadeUp 0.4s 0.1s ease both; }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--blue-dark); }
+  .table-count { font-size: 0.75rem; color: var(--gray-text); }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--gray-soft); }
+  thead th { padding: 11px 16px; text-align: left; font-size: 0.72rem; font-weight: 700; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--gray-soft); }
+  tbody td { padding: 13px 16px; font-size: 0.85rem; }
+
+  .user-cell { display: flex; align-items: center; gap: 10px; }
+  .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--blue-main); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .user-name { font-weight: 600; color: var(--blue-dark); }
+  .user-email { font-size: 0.72rem; color: var(--gray-text); }
+
+  .role-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+  .role-badge.admin     { background: var(--purple-pale); color: var(--purple); }
+  .role-badge.enseignant { background: var(--blue-pale); color: var(--blue-main); }
+  .role-badge.etudiant  { background: var(--green-pale); color: var(--green); }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+  .status-badge.active   { background: var(--green-pale); color: var(--green); }
+  .status-badge.inactive { background: var(--red-pale); color: var(--red); }
+
+  .action-btns { display: flex; gap: 6px; }
+  .action-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--gray-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .action-btn:hover { background: var(--blue-pale); border-color: var(--blue-main); }
+  .action-btn.danger:hover { background: var(--red-pale); border-color: var(--red); }
+
+  .empty-state { text-align: center; padding: 48px; color: var(--gray-text); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* MODALS */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,45,110,0.5); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border-radius: 20px; padding: 32px; width: 480px; max-width: 95vw; box-shadow: 0 32px 80px rgba(10,45,110,0.2); animation: fadeUp 0.3s ease; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--blue-dark); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.5; }
+  .modal-close:hover { opacity: 1; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--blue-dark); margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--blue-dark); background: var(--gray-soft); outline: none; transition: all 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--blue-main); background: var(--white); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 12px; margin-top: 24px; }
+  .btn-cancel { flex: 1; padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: none; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--gray-text); }
+  .btn-submit { flex: 2; padding: 11px; background: var(--blue-main); color: white; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-danger { flex: 2; padding: 11px; background: var(--red); color: white; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+
+  .confirm-icon { text-align: center; font-size: 48px; margin-bottom: 16px; }
+  .confirm-text { text-align: center; font-size: 0.88rem; color: var(--gray-text); margin-bottom: 8px; }
+  .confirm-name { text-align: center; font-size: 1rem; font-weight: 700; color: var(--blue-dark); }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.15); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 300; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--green); color: white; }
+  .toast.error { background: var(--red); color: white; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🎓</div>
+    <div class="sidebar-logo-text"><strong>ENT EST-Salé</strong><span>Espace Numérique de Travail</span></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏠</span> Tableau de bord</a>
+      <a class="nav-item" href="courses.html"><span class="nav-icon">📚</span> Cours en ligne</a>
+      <a class="nav-item" href="calendar.html"><span class="nav-icon">📅</span> Calendrier</a>
+      <a class="nav-item" href="notes.html"><span class="nav-icon">📊</span> Notes & Résultats</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Communication</div>
+      <a class="nav-item" href="messaging.html"><span class="nav-icon">✉️</span> Messagerie</a>
+      <a class="nav-item" href="notifications.html"><span class="nav-icon">🔔</span> Notifications</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Outils</div>
+      <a class="nav-item" href="ai.html"><span class="nav-icon">🤖</span> Assistant IA</a>
+      <a class="nav-item active" href="admin.html"><span class="nav-icon">⚙️</span> Administration</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">👤</div>
+      <div class="sidebar-user-info">
+        <strong id="user-name">...</strong>
+        <span id="user-role">...</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">🚪</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>⚙️ Administration</h1>
+      <p>Gestion des utilisateurs et des rôles</p>
+    </div>
+    <button class="btn-add" onclick="openCreateModal()">➕ Nouvel utilisateur</button>
+  </div>
+
+  <div class="content">
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card" style="animation-delay:0.05s">
+        <div class="stat-icon blue">👥</div>
+        <div><div class="stat-value" id="stat-total">--</div><div class="stat-label">Utilisateurs total</div></div>
+      </div>
+      <div class="stat-card" style="animation-delay:0.1s">
+        <div class="stat-icon green">🎓</div>
+        <div><div class="stat-value" id="stat-etudiants">--</div><div class="stat-label">Étudiants</div></div>
+      </div>
+      <div class="stat-card" style="animation-delay:0.15s">
+        <div class="stat-icon orange">👨‍🏫</div>
+        <div><div class="stat-value" id="stat-enseignants">--</div><div class="stat-label">Enseignants</div></div>
+      </div>
+      <div class="stat-card" style="animation-delay:0.2s">
+        <div class="stat-icon purple">⚙️</div>
+        <div><div class="stat-value" id="stat-admins">--</div><div class="stat-label">Administrateurs</div></div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('all', this)">👥 Tous</button>
+      <button class="tab" onclick="switchTab('etudiant', this)">🎓 Étudiants</button>
+      <button class="tab" onclick="switchTab('enseignant', this)">👨‍🏫 Enseignants</button>
+      <button class="tab" onclick="switchTab('admin', this)">⚙️ Admins</button>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Rechercher un utilisateur..." oninput="filterUsers()">
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>👥 Liste des utilisateurs</h3>
+        <span class="table-count" id="users-count"></span>
+      </div>
+      <div id="users-container">
+        <div class="empty-state"><div class="icon">⏳</div><p>Chargement...</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE USER MODAL -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ Nouvel utilisateur</h3>
+      <button class="modal-close" onclick="closeCreateModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Prénom *</label>
+        <input type="text" id="create-prenom" placeholder="Ex: Zineb">
+      </div>
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" id="create-nom" placeholder="Ex: Alaoui">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Username *</label>
+      <input type="text" id="create-username" placeholder="Ex: zineb.alaoui">
+    </div>
+    <div class="form-group">
+      <label>Email *</label>
+      <input type="email" id="create-email" placeholder="Ex: zineb@est-sale.ma">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe *</label>
+      <input type="password" id="create-password" placeholder="Minimum 8 caractères">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Rôle *</label>
+        <select id="create-role">
+          <option value="etudiant">🎓 Étudiant</option>
+          <option value="enseignant">👨‍🏫 Enseignant</option>
+          <option value="admin">⚙️ Admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filière</label>
+        <input type="text" id="create-filiere" placeholder="Ex: Informatique">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeCreateModal()">Annuler</button>
+      <button class="btn-submit" id="create-submit" onclick="createUser()">✅ Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ROLE MODAL -->
+<div class="modal-overlay" id="role-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔑 Changer le rôle</h3>
+      <button class="modal-close" onclick="closeRoleModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Utilisateur</label>
+      <input type="text" id="role-username" readonly style="opacity:0.7">
+    </div>
+    <div class="form-group">
+      <label>Nouveau rôle *</label>
+      <select id="role-select">
+        <option value="etudiant">🎓 Étudiant</option>
+        <option value="enseignant">👨‍🏫 Enseignant</option>
+        <option value="admin">⚙️ Administrateur</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeRoleModal()">Annuler</button>
+      <button class="btn-submit" id="role-submit" onclick="assignRole()">✅ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Confirmer la suppression</h3>
+      <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-text">Voulez-vous vraiment supprimer l'utilisateur ?</div>
+    <div class="confirm-name" id="delete-username-display"></div>
+    <p style="text-align:center;font-size:0.78rem;color:var(--red);margin-top:8px">Cette action est irréversible !</p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDeleteModal()">Annuler</button>
+      <button class="btn-danger" id="delete-confirm-btn" onclick="confirmDelete()">🗑️ Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../js/admin.js"></script>
+</body>
+</html>

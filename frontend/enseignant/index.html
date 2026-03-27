@@ -6,11 +6,70 @@
   <title>ENT Salé — Espace Enseignant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css?v=1773360858"/>
+  <link rel="stylesheet" href="style.css?v=2"/>
   <style>
-    /* Styles critiques inline — indépendants du cache style.css */
     .panel        { display: none !important; }
     .panel.active { display: block !important; }
+
+    /* ── MESSAGERIE ── */
+    .msg-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; height: calc(100vh - 130px); background: var(--white); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .conv-list { border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .conv-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .conv-header h4 { font-size: .85rem; font-weight: 700; }
+    .conv-search { padding: .6rem .9rem; border-bottom: 1px solid var(--border); }
+    .conv-search input { width: 100%; padding: .45rem .75rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: .78rem; font-family: 'Jost', sans-serif; outline: none; background: var(--cream); }
+    .conv-search input:focus { border-color: var(--gold); }
+    .conv-items { flex: 1; overflow-y: auto; }
+    .conv-item { padding: .85rem 1rem; cursor: pointer; border-bottom: 1px solid rgba(224,216,192,.4); transition: background .15s; display: flex; align-items: center; gap: .75rem; }
+    .conv-item:hover { background: rgba(201,168,76,.06); }
+    .conv-item.active { background: rgba(201,168,76,.12); }
+    .conv-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: var(--dark); flex-shrink: 0; }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-name { font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-last { font-size: .7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .conv-badge { background: var(--gold); color: var(--dark); font-size: .6rem; font-weight: 700; padding: .15rem .45rem; border-radius: 99px; flex-shrink: 0; }
+    .chat-area { display: flex; flex-direction: column; }
+    .chat-topbar { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: .75rem; }
+    .chat-topbar-name { font-weight: 600; font-size: .9rem; }
+    .chat-topbar-role { font-size: .7rem; color: var(--muted); }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: .7rem; background: #FEFCF8; }
+    .msg-bubble { max-width: 68%; padding: .65rem .95rem; border-radius: 14px; font-size: .82rem; line-height: 1.5; }
+    .msg-bubble.mine { background: linear-gradient(135deg, var(--gold-dark), #A07820); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-bubble.theirs { background: var(--white); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg-meta { font-size: .62rem; opacity: .65; margin-top: .3rem; }
+    .chat-input-area { padding: .9rem 1.2rem; border-top: 1px solid var(--border); display: flex; gap: .7rem; align-items: flex-end; }
+    .chat-input-area textarea { flex: 1; padding: .65rem .9rem; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Jost', sans-serif; font-size: .83rem; resize: none; outline: none; max-height: 100px; min-height: 40px; }
+    .chat-input-area textarea:focus { border-color: var(--gold); }
+    .chat-send-btn { padding: .65rem 1.1rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all .2s; flex-shrink: 0; }
+    .chat-send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,.4); }
+    .chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: .5rem; }
+    .chat-empty-icon { font-size: 2.5rem; }
+    .new-conv-btn { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; padding: .38rem .75rem; border-radius: 7px; font-size: .75rem; font-weight: 600; cursor: pointer; color: var(--dark); }
+
+    /* ── NOTIFICATIONS ── */
+    .notif-list { display: flex; flex-direction: column; gap: .65rem; max-width: 720px; }
+    .notif-item { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; display: flex; gap: 1rem; align-items: flex-start; transition: all .2s; }
+    .notif-item.unread { border-left: 3px solid var(--gold); background: rgba(201,168,76,.04); }
+    .notif-item:hover { box-shadow: 0 4px 14px rgba(201,168,76,.1); }
+    .notif-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .notif-body { flex: 1; }
+    .notif-title { font-size: .83rem; font-weight: 600; }
+    .notif-desc { font-size: .76rem; color: var(--muted); margin-top: .2rem; line-height: 1.5; }
+    .notif-time { font-size: .65rem; color: var(--muted); margin-top: .3rem; }
+    .notif-badge { font-size: .62rem; font-weight: 700; background: var(--gold-xlight); color: var(--gold-dark); padding: .12rem .5rem; border-radius: 99px; }
+
+    /* badge notification dans sidebar */
+    .nav-badge { background: var(--gold); color: var(--dark); font-size: .56rem; font-weight: 700; padding: .1rem .38rem; border-radius: 99px; margin-left: auto; }
+
+    /* modal nouvelle conv */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--white); border-radius: 16px; padding: 2rem; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    .modal-box h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; margin-bottom: 1.2rem; }
+    .modal-box label { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: .36rem; }
+    .modal-box input, .modal-box select { width: 100%; padding: .65rem .85rem; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Jost', sans-serif; font-size: .83rem; outline: none; margin-bottom: 1rem; }
+    .modal-box input:focus, .modal-box select:focus { border-color: var(--gold); }
+    .modal-actions { display: flex; gap: .7rem; justify-content: flex-end; margin-top: .5rem; }
   </style>
 </head>
 <body>
@@ -47,6 +106,11 @@
         <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon">🏆</span>Classements filière</a>
         <a class="nav-item" data-panel="releve"     href="#"><span class="nav-icon">📄</span>Relevés</a>
       </div>
+      <div class="nav-group">
+        <span class="nav-label">Communication</span>
+        <a class="nav-item" data-panel="messagerie"    href="#"><span class="nav-icon">💬</span>Messagerie <span class="nav-badge" id="unreadBadge" style="display:none">0</span></a>
+        <a class="nav-item" data-panel="notifications" href="#"><span class="nav-icon">🔔</span>Notifications <span class="nav-badge" id="notifBadge" style="display:none">0</span></a>
+      </div>
     </nav>
 
     <div class="sidebar-foot">
@@ -56,7 +120,6 @@
 
   <!-- ══ MAIN ══ -->
   <div class="main">
-
     <header class="topbar">
       <h2 class="topbar-title" id="topbarTitle">Tableau de bord</h2>
       <span class="topbar-date" id="topbarDate"></span>
@@ -77,6 +140,9 @@
           <div class="stat-mini"><span class="sm-icon">📁</span><div><div class="sm-val" id="nbMesFichiers">—</div><div class="sm-lbl">Mes fichiers</div></div></div>
           <div class="stat-mini"><span class="sm-icon">📅</span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances</div></div></div>
           <div class="stat-mini"><span class="sm-icon">👥</span><div><div class="sm-val" id="nbFilières">—</div><div class="sm-lbl">Filières</div></div></div>
+          <div class="stat-mini" style="cursor:pointer" onclick="switchPanel('messagerie', document.querySelector('[data-panel=messagerie]'))">
+            <span class="sm-icon">💬</span><div><div class="sm-val" id="nbConvs">—</div><div class="sm-lbl">Conversations</div></div>
+          </div>
         </div>
         <div class="section-head"><h3 class="section-title">Mes derniers fichiers déposés</h3><a href="#" class="link-more" data-panel="upload">+ Déposer →</a></div>
         <div class="cards-grid" id="accueilGrid"></div>
@@ -94,7 +160,6 @@
           </div>
           <input type="file" id="fileInput" style="display:none"
             accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.txt,.py,.java,.c,.cpp"/>
-
           <div class="upload-form">
             <div class="form-grid">
               <div class="form-group full"><label>Titre *</label><input type="text" id="fTitle" placeholder="ex: Cours Introduction aux Réseaux"/></div>
@@ -116,12 +181,10 @@
                 </select>
               </div>
             </div>
-
             <div class="progress-wrap" id="progressWrap">
               <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
               <div class="progress-label" id="progressLabel">Envoi en cours…</div>
             </div>
-
             <div id="uploadAlert"></div>
             <button class="btn btn-gold upload-submit" id="submitUploadBtn">📤 Déposer le fichier</button>
           </div>
@@ -161,15 +224,97 @@
 
       <!-- RELEVÉS -->
       <section class="panel" id="panel-releve">
-        <div class="section-head"><h3 class="section-title">Demander un relevé</h3></div>
-        <div class="form-card">
-          <p class="form-card-desc">Saisissez le semestre pour soumettre une demande de relevé.</p>
-          <div class="form-group"><label>Semestre ID</label><input type="number" id="rSemestre" placeholder="1" min="1"/></div>
-          <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.72rem;margin-top:.5rem">Envoyer la demande</button>
+        <div class="section-head">
+          <h3 class="section-title">Relevés de notes</h3>
+          <button class="btn btn-outline btn-sm" onclick="loadMesDemandes()">↻ Actualiser</button>
+        </div>
+
+        <!-- Formulaire nouvelle demande -->
+        <div class="form-card" style="margin-bottom:1.5rem;max-width:100%">
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:.8rem;color:var(--gold-dark)">📋 Nouvelle demande de relevé</div>
+          <p class="form-card-desc" style="margin-bottom:1rem">Saisissez le semestre et l'ID de l'étudiant pour soumettre une demande. L'admin doit approuver avant que vous puissiez consulter le relevé.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="form-group"><label>Semestre ID *</label><input type="number" id="rSemestre" placeholder="ex: 1" min="1"/></div>
+            <div class="form-group"><label>ID Étudiant *</label><input type="number" id="rEtudiantId" placeholder="ex: 42" min="1"/></div>
+          </div>
+          <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.72rem;margin-top:.5rem">📤 Envoyer la demande</button>
           <div id="releveResult" style="margin-top:1rem"></div>
+        </div>
+
+        <!-- Liste des demandes -->
+        <div class="section-head" style="margin-top:.5rem">
+          <h4 style="font-size:1rem;font-weight:600">Mes demandes</h4>
+        </div>
+        <div id="mesDemandes"><div class="loader"></div></div>
+      </section>
+
+      <!-- ══ MESSAGERIE ══ -->
+      <section class="panel" id="panel-messagerie">
+        <div class="section-head">
+          <h3 class="section-title">Messagerie</h3>
+          <button class="new-conv-btn" onclick="openNewConvModal()">✏️ Nouvelle conversation</button>
+        </div>
+        <div class="msg-layout">
+          <!-- Liste conversations -->
+          <div class="conv-list">
+            <div class="conv-header">
+              <h4>Conversations</h4>
+            </div>
+            <div class="conv-search">
+              <input type="text" id="convSearch" placeholder="🔍 Rechercher…" oninput="filterConvs(this.value)"/>
+            </div>
+            <div class="conv-items" id="convItems">
+              <div class="loader"></div>
+            </div>
+          </div>
+          <!-- Zone chat -->
+          <div class="chat-area" id="chatArea">
+            <div class="chat-empty">
+              <div class="chat-empty-icon">💬</div>
+              <p style="font-size:.83rem;color:var(--muted)">Sélectionnez une conversation</p>
+              <p style="font-size:.75rem;color:var(--muted)">ou démarrez-en une nouvelle</p>
+            </div>
+          </div>
         </div>
       </section>
 
+      <!-- ══ NOTIFICATIONS ══ -->
+      <section class="panel" id="panel-notifications">
+        <div class="section-head">
+          <h3 class="section-title">Notifications</h3>
+          <button class="btn btn-outline btn-sm" id="markAllReadBtn">✓ Tout marquer comme lu</button>
+        </div>
+        <div id="notifList"><div class="loader"></div></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ══ MODAL RELEVÉ DE NOTES ══ -->
+  <div class="modal-overlay" id="releveModal">
+    <div class="modal-box" style="max-width:700px;width:95%">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+        <h3 style="margin:0">📊 Relevé de notes</h3>
+        <button onclick="closeReleveModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div id="releveModalContent"><div class="loader"></div></div>
+      <div class="modal-actions" style="margin-top:1rem">
+        <button class="btn btn-outline" onclick="closeReleveModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL NOUVELLE CONVERSATION ══ -->
+  <div class="modal-overlay" id="newConvModal">
+    <div class="modal-box">
+      <h3>Nouvelle conversation</h3>
+      <label>ID de l'utilisateur cible</label>
+      <input type="text" id="newConvTargetId" placeholder="ex: uuid-keycloak-de-l-utilisateur"/>
+      <div id="newConvError" style="font-size:.78rem;color:var(--error);margin-top:-.5rem;margin-bottom:.8rem"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeNewConvModal()">Annuler</button>
+        <button class="btn btn-gold" onclick="startNewConversation()">Démarrer</button>
+      </div>
     </div>
   </div>
 

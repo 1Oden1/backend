@@ -70,6 +70,7 @@ function switchPanel(id, navEl) {
   if (navEl) navEl.classList.add('active');
   if (id === 'mesfichiers') loadMesFichiers();
   if (id === 'emploi')      initEmploiPanel();
+  if (id === 'notifs')      loadNotifs();
 }
 
 /* ── ACCUEIL ──────────────────────────────────────────────────────── */
@@ -77,16 +78,61 @@ async function loadAccueil() {
   const grid = document.getElementById('accueilGrid');
   if (!grid) return;
   grid.innerHTML = '<div class="loader"></div>';
+
+  // Charger fichiers + stats calendar en parallèle
   try {
-    // GET /api/download/my → fichiers déposés par cet enseignant
-    const r = await api('GET', '/api/download/my');
-    if (!r.ok) throw new Error();
-    const d = await r.json();
-    const files = d.files || [];
-    const nbEl = document.getElementById('nbMesFichiers');
-    if (nbEl) nbEl.textContent = d.total || files.length;
-    renderCards(files.slice(0, 4), grid);
-  } catch { grid.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>'; }
+    const [rFiles, rDepts] = await Promise.all([
+      api('GET', '/api/download/my'),
+      api('GET', '/api/calendar/departements'),
+    ]);
+
+    if (rFiles.ok) {
+      const d = await rFiles.json();
+      const files = d.files || [];
+      const nbEl = document.getElementById('nbMesFichiers');
+      if (nbEl) nbEl.textContent = d.total || files.length;
+      renderCards(files.slice(0, 4), grid);
+    } else {
+      grid.innerHTML = '<div class="empty"><div class="e-icon">📭</div><p>Aucun fichier déposé</p></div>';
+    }
+
+    // Stats séances + filières depuis le calendrier
+    if (rDepts.ok) {
+      const depts = await rDepts.json();
+      let totalFilieres = 0, totalSeances = 0;
+      const myLastName  = (currentUser.last_name  || '').toLowerCase().trim();
+      const myFirstName = (currentUser.first_name || '').toLowerCase().trim();
+
+      await Promise.all((depts || []).map(async d => {
+        const rF = await api('GET', `/api/calendar/departements/${d.id}/filieres`);
+        if (!rF.ok) return;
+        const filieres = await rF.json();
+        totalFilieres += (filieres || []).length;
+        await Promise.all((filieres || []).map(async f => {
+          const rS = await api('GET', `/api/calendar/filieres/${f.id}/semestres`);
+          if (!rS.ok) return;
+          const sems = await rS.json();
+          await Promise.all((sems || []).map(async s => {
+            const rE = await api('GET', `/api/calendar/emploi-du-temps/${s.id}`);
+            if (!rE.ok) return;
+            const ed = await rE.json();
+            const seances = (ed.seances || []).filter(sc =>
+              (sc.enseignant_nom    || '').toLowerCase().trim() === myLastName &&
+              (sc.enseignant_prenom || '').toLowerCase().trim() === myFirstName
+            );
+            totalSeances += seances.length;
+          }));
+        }));
+      }));
+
+      const nbS = document.getElementById('nbSeances');
+      const nbF = document.getElementById('nbFilières');
+      if (nbS) nbS.textContent = totalSeances;
+      if (nbF) nbF.textContent = totalFilieres;
+    }
+  } catch(e) {
+    grid.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><p>Erreur de chargement</p></div>';
+  }
 }
 
 /* ── MES FICHIERS ─────────────────────────────────────────────────── */
@@ -357,7 +403,7 @@ window.loadEmploi = async function(forceRefresh){
 async function loadClassement() {
   const filiereId  = document.getElementById('clFiliere').value;
   const semestreId = document.getElementById('clSemestre').value;
-  if (!filiereId || !semestreId) { showToast('Remplissez les deux champs','error'); return; }
+  if (!filiereId || !semestreId) { showToast('Sélectionnez une filière et un semestre','error'); return; }
   const wrap = document.getElementById('classementContent');
   wrap.innerHTML = '<div class="loader"></div>';
   try {
@@ -395,18 +441,9 @@ async function loadClassement() {
 async function demanderReleve() {
   const semId    = parseInt(document.getElementById('rSemestre').value);
   const res      = document.getElementById('releveResult');
-  let etudiantId = parseInt(document.getElementById('rEtudiantId')?.value);
-  if (!semId) { res.innerHTML = '<div class="alert alert-err">Semestre ID requis.</div>'; return; }
-  if (!etudiantId) {
-    res.innerHTML = `
-      <div class="form-group" style="margin-top:.8rem">
-        <label>ID Étudiant</label>
-        <input type="number" id="rEtudiantId" placeholder="ex: 42" min="1"
-          style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif"/>
-        <button class="btn btn-gold" onclick="demanderReleve()" style="width:100%;padding:.65rem;margin-top:.5rem">Confirmer</button>
-      </div>`;
-    return;
-  }
+  const etudiantId = parseInt(document.getElementById('rEtudiantId')?.value || '0');
+  if (!semId || isNaN(semId)) { res.innerHTML = '<div class="alert alert-err">Sélectionnez un semestre.</div>'; return; }
+  if (!etudiantId || isNaN(etudiantId)) { res.innerHTML = '<div class="alert alert-err">Sélectionnez un étudiant.</div>'; return; }
   try {
     // POST /api/notes/enseignant/demandes-releve
     // Body : { etudiant_id, calendar_semestre_id }
@@ -438,3 +475,152 @@ function showToast(msg, type='') {
   t.textContent = msg; t.className = 'toast show ' + type;
   clearTimeout(_toastTimer); _toastTimer = setTimeout(() => { t.className = 'toast'; }, 3200);
 }
+
+
+/* ── NOTIFICATIONS ─────────────────────────────────────────────────── */
+async function loadNotifs() {
+  const wrap = document.getElementById('notifsContent');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader"></div>';
+  try {
+    const r = await api('GET', '/api/messaging/notifications/');
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    const list = d.notifications || [];
+    if (!list.length) {
+      wrap.innerHTML = '<div class="empty"><div class="e-icon">🔔</div><p>Aucune notification</p></div>';
+      return;
+    }
+    wrap.innerHTML = list.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" style="
+        padding:.8rem 1rem;border-bottom:1px solid var(--border);display:flex;
+        gap:.8rem;align-items:flex-start;cursor:pointer" 
+        onclick="markRead('${n.notification_id}', '${n.created_at}', this)">
+        <div style="font-size:1.3rem;flex-shrink:0">${n.type === 'schedule_update' ? '📅' : n.type === 'grade_reminder' ? '⏰' : '🔔'}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.85rem">${escHtml(n.title)}</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:.15rem">${escHtml(n.content)}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem">${new Date(n.created_at).toLocaleString('fr-FR')}</div>
+        </div>
+        ${!n.is_read ? '<div style="width:8px;height:8px;background:var(--gold);border-radius:50%;flex-shrink:0;margin-top:4px"></div>' : ''}
+      </div>`).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">⚠️</div><p>Erreur notifications (${e.message})</p></div>`;
+  }
+}
+
+window.markRead = async function(notifId, createdAt, el) {
+  try {
+    await api('PUT', `/api/messaging/notifications/${notifId}/read`, { created_at: createdAt });
+    el.classList.remove('notif-unread');
+    const dot = el.querySelector('[style*="background:var(--gold)"]');
+    if (dot) dot.remove();
+  } catch {}
+};
+
+async function markAllRead() {
+  try {
+    await api('PUT', '/api/messaging/notifications/read-all');
+    loadNotifs();
+    showToast('Toutes les notifications lues ✓', 'success');
+  } catch { showToast('Erreur','error'); }
+}
+
+
+/* ── Cascades Classement ──────────────────────────────────────────── */
+(function initClassSelects() {
+  // Charger les départements au démarrage
+  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(list => {
+    const sel = document.getElementById('clDept');
+    if (!sel) return;
+    (list || []).forEach(d => {
+      const o = document.createElement('option'); o.value = d.id; o.textContent = d.nom; sel.appendChild(o);
+    });
+  });
+})();
+
+window.classOnDept = function() {
+  const dId = document.getElementById('clDept').value;
+  const fSel = document.getElementById('clFiliere');
+  const sSel = document.getElementById('clSemestre');
+  fSel.innerHTML = '<option value="">— Choisir —</option>';
+  sSel.innerHTML = '<option value="">— Choisir —</option>';
+  fSel.disabled = true; sSel.disabled = true;
+  if (!dId) return;
+  api('GET', `/api/calendar/departements/${dId}/filieres`).then(r => r.ok ? r.json() : []).then(list => {
+    fSel.disabled = false;
+    (list || []).forEach(f => {
+      const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; fSel.appendChild(o);
+    });
+  });
+};
+
+window.classOnFiliere = function() {
+  const fId = document.getElementById('clFiliere').value;
+  const sSel = document.getElementById('clSemestre');
+  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
+  if (!fId) return;
+  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
+    sSel.disabled = false;
+    (list || []).forEach(s => {
+      const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o);
+    });
+  });
+};
+
+/* ── Cascades Relevé ──────────────────────────────────────────────── */
+(function initReleveSelects() {
+  // Charger toutes les filières
+  api('GET', '/api/calendar/departements').then(r => r.ok ? r.json() : []).then(depts => {
+    return Promise.all((depts || []).map(d =>
+      api('GET', `/api/calendar/departements/${d.id}/filieres`).then(r => r.ok ? r.json() : [])
+    ));
+  }).then(groups => {
+    const all = [].concat(...groups);
+    const sel = document.getElementById('rFiliere');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    all.forEach(f => {
+      const o = document.createElement('option'); o.value = f.id; o.textContent = f.nom; sel.appendChild(o);
+    });
+  });
+})();
+
+window.releveOnFiliere = function() {
+  const fId = document.getElementById('rFiliere').value;
+  const sSel = document.getElementById('rSemestre');
+  const eSel = document.getElementById('rEtudiantId');
+  sSel.innerHTML = '<option value="">— Choisir —</option>'; sSel.disabled = true;
+  eSel.innerHTML = '<option value="">— Choisir d\'abord un semestre —</option>'; eSel.disabled = true;
+  if (!fId) return;
+  api('GET', `/api/calendar/filieres/${fId}/semestres`).then(r => r.ok ? r.json() : []).then(list => {
+    sSel.disabled = false;
+    (list || []).forEach(s => {
+      const o = document.createElement('option'); o.value = s.id; o.textContent = s.nom; sSel.appendChild(o);
+    });
+  });
+};
+
+window.releveOnSemestre = async function() {
+  const fId = document.getElementById('rFiliere').value;
+  const eSel = document.getElementById('rEtudiantId');
+  eSel.innerHTML = '<option value="">Chargement…</option>'; eSel.disabled = true;
+  if (!fId) return;
+  try {
+    const r = await api('GET', `/api/admin/notes/admin/etudiants`);
+    if (!r.ok) throw new Error();
+    let list = await r.json();
+    if (!Array.isArray(list)) list = list.etudiants || [];
+    list = list.filter(e => String(e.calendar_filiere_id) === String(fId));
+    eSel.innerHTML = '<option value="">— Choisir un étudiant —</option>';
+    list.forEach(e => {
+      const o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = `${e.prenom} ${e.nom} (${e.cne})`;
+      eSel.appendChild(o);
+    });
+    eSel.disabled = false;
+  } catch {
+    eSel.innerHTML = '<option value="">Erreur chargement</option>';
+  }
+};

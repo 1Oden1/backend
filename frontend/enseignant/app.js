@@ -71,6 +71,7 @@ function switchPanel(id, navEl) {
   if (id === 'mesfichiers') loadMesFichiers();
   if (id === 'emploi')      initEmploiPanel();
   if (id === 'notifs')      loadNotifs();
+  if (id === 'chat')        loadEnsConversations();
 }
 
 /* ── ACCUEIL ──────────────────────────────────────────────────────── */
@@ -623,4 +624,178 @@ window.releveOnSemestre = async function() {
   } catch {
     eSel.innerHTML = '<option value="">Erreur chargement</option>';
   }
+};
+
+
+/* ══════════════════════════════════════════════════════════════════
+   CHAT ENSEIGNANT — peut discuter avec les admins
+══════════════════════════════════════════════════════════════════ */
+var _ensSelectedUser  = null;
+var _ensChatCache     = {};
+var _ensPollTimer     = null;
+var _ensActiveChatId  = null;
+var _ensSearchTimer   = null;
+
+window.loadEnsConversations = async function() {
+  const wrap = document.getElementById('ensConvItems');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader"></div>';
+  try {
+    const r = await api('GET', '/api/messaging/chat/conversations');
+    if (!r.ok) throw new Error(r.status);
+    const convs = await r.json();
+    if (!convs.length) {
+      wrap.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">Aucune conversation.<br>Cliquez <strong>+ Nouvelle</strong>.</div>';
+      return;
+    }
+    wrap.innerHTML = convs.map(c =>
+      `<div class="conv-item" onclick="openEnsConv('${c.conversation_id}','${escHtml(c.other_user_name||'?')}')">
+        <div class="conv-avatar">${(c.other_user_name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div class="conv-name">${escHtml(c.other_user_name||'—')}</div>
+          <div class="conv-last">${c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR') : 'Aucun message'}</div>
+        </div>
+      </div>`
+    ).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div style="padding:1rem;color:var(--muted);font-size:.82rem;text-align:center">⚠ Chat indisponible<br>
+      <button class="btn btn-outline btn-sm" style="margin-top:.5rem" onclick="loadEnsConversations()">↻ Réessayer</button></div>`;
+  }
+};
+
+window.openEnsConv = function(convId, convName) {
+  _ensActiveChatId = convId;
+  const area = document.getElementById('ensChatArea');
+  area.innerHTML =
+    `<div class="chat-header"><div class="conv-avatar" style="width:32px;height:32px;font-size:.85rem">${convName[0].toUpperCase()}</div><strong>${escHtml(convName)}</strong></div>`
+    + `<div id="ensMsgsWrap"></div>`
+    + `<div class="chat-input-row"><input type="text" id="ensMsgInput" placeholder="Écrire un message…"/>
+       <button class="btn btn-gold" onclick="sendEnsMsg('${convId}')">Envoyer</button></div>`;
+  document.getElementById('ensMsgInput').onkeydown = e => { if (e.key === 'Enter') sendEnsMsg(convId); };
+  fetchEnsMessages(convId);
+  clearInterval(_ensPollTimer);
+  _ensPollTimer = setInterval(() => fetchEnsMessages(convId), 5000);
+};
+
+async function fetchEnsMessages(convId) {
+  const wrap = document.getElementById('ensMsgsWrap');
+  if (!wrap) { clearInterval(_ensPollTimer); return; }
+  try {
+    const r = await api('GET', `/api/messaging/chat/conversations/${convId}/messages`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const msgs = (d.messages || []).filter(m => !m.is_hidden);
+    const myId = currentUser.id || '';
+    const atBottom = (wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight) < 40;
+    if (!msgs.length) { wrap.innerHTML = '<div class="chat-empty-msgs">Aucun message. Dites bonjour !</div>'; return; }
+    wrap.innerHTML = msgs.map(m => {
+      const isMe = m.sender_id === myId;
+      return `<div class="msg ${isMe ? 'msg-me' : 'msg-other'}">
+        ${!isMe ? `<div class="msg-sender">${escHtml(m.sender_name)}</div>` : ''}
+        <div class="msg-bubble">${escHtml(m.content)}</div>
+        <div class="msg-time">${m.sent_at ? new Date(m.sent_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      </div>`;
+    }).join('');
+    if (atBottom) wrap.scrollTop = wrap.scrollHeight;
+  } catch {}
+}
+
+window.sendEnsMsg = async function(convId) {
+  const input = document.getElementById('ensMsgInput');
+  const content = input ? input.value.trim() : '';
+  if (!content) return;
+  input.value = '';
+  try {
+    const r = await api('POST', `/api/messaging/chat/conversations/${convId}/messages`, { content });
+    if (r.ok || r.status === 201) fetchEnsMessages(convId);
+    else { input.value = content; showToast('Erreur envoi', 'error'); }
+  } catch { input.value = content; showToast('Erreur réseau', 'error'); }
+};
+
+window.openEnsChat = function() {
+  _ensSelectedUser = null;
+  const btn = document.getElementById('btnStartEnsChat');
+  if (btn) btn.disabled = true;
+  const list = document.getElementById('ensChatUserList');
+  if (list) list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Tapez pour chercher...</div>';
+  const inp = document.getElementById('ensChatSearch');
+  if (inp) inp.value = '';
+  const modal = document.getElementById('ensChatModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeEnsChat = function() {
+  const modal = document.getElementById('ensChatModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.ensChatSearchUsers = function(q) {
+  clearTimeout(_ensSearchTimer);
+  const list = document.getElementById('ensChatUserList');
+  if (!q || q.length < 2) {
+    list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Tapez au moins 2 caractères...</div>';
+    return;
+  }
+  list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
+  _ensSearchTimer = setTimeout(async () => {
+    try {
+      // L'enseignant peut contacter uniquement les admins
+      const r = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=20');
+      const users = r.ok ? await r.json() : [];
+      const admins = (users || []).filter(u => (u.roles || []).includes('admin'));
+      if (!admins.length) {
+        list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun admin trouvé.</div>';
+        return;
+      }
+      _ensChatCache = {};
+      list.innerHTML = admins.map(u => {
+        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
+        _ensChatCache[u.id] = { id: u.id, name, roles: u.roles || [] };
+        return `<div onclick="selectEnsUser('${u.id}')" data-uid="${u.id}"
+          style="padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#7c3aed;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">${escHtml(name)}</div>
+            <div style="font-size:.71rem;color:var(--muted)">👑 Admin</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch {
+      list.innerHTML = '<div style="padding:.8rem;text-align:center;color:crimson;font-size:.82rem">Erreur de chargement.</div>';
+    }
+  }, 350);
+};
+
+window.selectEnsUser = function(id) {
+  _ensSelectedUser = _ensChatCache[id];
+  if (!_ensSelectedUser) return;
+  document.querySelectorAll('#ensChatUserList [data-uid]').forEach(el =>
+    el.style.background = el.dataset.uid === id ? 'var(--cream,#FAF8F2)' : ''
+  );
+  const btn = document.getElementById('btnStartEnsChat');
+  if (btn) btn.disabled = false;
+};
+
+window.startEnsChatConv = async function() {
+  if (!_ensSelectedUser) return;
+  const btn = document.getElementById('btnStartEnsChat');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+  try {
+    const r = await api('POST', '/api/messaging/chat/conversations', {
+      target_user_id:    _ensSelectedUser.id,
+      target_user_name:  _ensSelectedUser.name,
+      target_user_roles: _ensSelectedUser.roles,
+    });
+    if (r.ok || r.status === 201) {
+      const d = await r.json();
+      closeEnsChat();
+      loadEnsConversations();
+      openEnsConv(d.conversation_id, _ensSelectedUser.name);
+      showToast('Conversation démarrée ✓', 'success');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast('✗ ' + (d.detail || `Erreur ${r.status}`), 'error');
+    }
+  } catch { showToast('Erreur réseau', 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Démarrer'; } }
 };

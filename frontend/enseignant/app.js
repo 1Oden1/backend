@@ -586,7 +586,9 @@ async function loadNotifs() {
 
 window.markRead = async function(notifId, createdAt, el) {
   try {
-    await api('PUT', `/api/messaging/notifications/${notifId}/read`, { created_at: createdAt });
+    // La route attend created_at_iso comme query param
+    const encodedDate = encodeURIComponent(createdAt);
+    await api('PUT', `/api/messaging/notifications/${notifId}/read?created_at_iso=${encodedDate}`);
     el.classList.remove('notif-unread');
     const dot = el.querySelector('[style*="background:var(--gold)"]');
     if (dot) dot.remove();
@@ -703,18 +705,42 @@ window.ensChatSearchUsers = function(q) {
   list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
   _ensSearchTimer = setTimeout(async () => {
     try {
-      const r = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=50');
-      const users = r.ok ? await r.json() : [];
       const myId = currentUser.id || '';
-      // Enseignants + admins + délégués — exclure soi-même et les étudiants simples
-      const targets = (users || []).filter(u => {
-        const roles = u.roles || [];
-        return u.id !== myId && (
-          roles.includes('enseignant') ||
-          roles.includes('admin')      ||
-          roles.includes('delegue')
-        );
-      });
+      const q2 = q.toLowerCase();
+      // Source 1 : enseignants depuis ms-calendar (accessible à tous)
+      const rEns = await api('GET', '/api/calendar/enseignants');
+      const allEns = rEns.ok ? await rEns.json() : [];
+      const ensFiltered = allEns.filter(e =>
+        e.user_id && e.user_id !== myId && (
+          (e.nom    || '').toLowerCase().includes(q2) ||
+          (e.prenom || '').toLowerCase().includes(q2)
+        )
+      ).map(e => ({
+        id: e.user_id,
+        first_name: e.prenom, last_name: e.nom,
+        email: e.email || '', username: e.nom,
+        roles: ['enseignant']
+      }));
+
+      // Source 2 : admins + délégués depuis /api/admin/users/ (peut échouer si 403)
+      let adminDelegueUsers = [];
+      try {
+        const rAdm = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=50');
+        if (rAdm.ok) {
+          const all = await rAdm.json();
+          adminDelegueUsers = (all || []).filter(u => {
+            const roles = u.roles || [];
+            return u.id !== myId && (roles.includes('admin') || roles.includes('delegue'));
+          });
+        }
+      } catch {}
+
+      // Fusionner en évitant doublons (par id)
+      const seen = new Set(ensFiltered.map(u => u.id));
+      const targets = [
+        ...ensFiltered,
+        ...adminDelegueUsers.filter(u => !seen.has(u.id))
+      ];
       if (!targets.length) {
         list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun résultat.</div>';
         return;

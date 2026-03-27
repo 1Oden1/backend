@@ -437,15 +437,23 @@ window.releveOnSemestre = async function() {
   eSel.innerHTML = '<option value="">Chargement…</option>'; eSel.disabled = true;
   if (!fId) return;
   try {
-    const r = await api('GET', '/api/admin/notes/admin/etudiants');
-    if (!r.ok) throw new Error();
-    let list = await r.json();
-    if (!Array.isArray(list)) list = list.etudiants || [];
-    list = list.filter(e => String(e.calendar_filiere_id) === String(fId));
+    // Route dédiée enseignant — pas besoin de droits admin
+    const r = await api('GET', `/api/notes/enseignant/etudiants-filiere/${fId}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const list = await r.json();
+    if (!list.length) {
+      eSel.innerHTML = '<option value="">Aucun étudiant dans cette filière</option>';
+      return;
+    }
     eSel.innerHTML = '<option value="">— Choisir un étudiant —</option>';
-    list.forEach(e => { const o = document.createElement('option'); o.value = e.id; o.textContent = `${e.prenom} ${e.nom} (${e.cne})`; eSel.appendChild(o); });
+    list.forEach(e => {
+      const o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = `${e.prenom} ${e.nom} (${e.cne})`;
+      eSel.appendChild(o);
+    });
     eSel.disabled = false;
-  } catch { eSel.innerHTML = '<option value="">Erreur chargement</option>'; }
+  } catch(err) { eSel.innerHTML = `<option value="">Erreur : ${err.message}</option>`; }
 };
 
 async function demanderReleve() {
@@ -722,25 +730,10 @@ window.ensChatSearchUsers = function(q) {
         roles: ['enseignant']
       }));
 
-      // Source 2 : admins + délégués depuis /api/admin/users/ (peut échouer si 403)
-      let adminDelegueUsers = [];
-      try {
-        const rAdm = await api('GET', '/api/admin/users/?search=' + encodeURIComponent(q) + '&max=50');
-        if (rAdm.ok) {
-          const all = await rAdm.json();
-          adminDelegueUsers = (all || []).filter(u => {
-            const roles = u.roles || [];
-            return u.id !== myId && (roles.includes('admin') || roles.includes('delegue'));
-          });
-        }
-      } catch {}
-
-      // Fusionner en évitant doublons (par id)
-      const seen = new Set(ensFiltered.map(u => u.id));
-      const targets = [
-        ...ensFiltered,
-        ...adminDelegueUsers.filter(u => !seen.has(u.id))
-      ];
+      // Les enseignants peuvent uniquement contacter d'autres enseignants
+      // (via ms-calendar, accessible sans droits admin)
+      // Note: pour contacter des admins/délégués, l'admin doit initier la conversation
+      const targets = ensFiltered;
       if (!targets.length) {
         list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun résultat.</div>';
         return;

@@ -1,137 +1,102 @@
 """
-Router étudiant — /api/v1/notes/etudiant
-Rôle requis : etudiant
+Router enseignant — /api/v1/notes/enseignant
+Rôle requis : enseignant
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-import httpx
 from sqlalchemy.orm import Session
 
-from app.auth import require_student
-from app.config import settings
+from app.auth import require_teacher
 from app.database import get_db
-from app.models import DemandeClassement, DemandeReleve, Etudiant
+from app.models import DemandeReleve, Etudiant
 from app.schemas import (
-    DemandeClassementIn, DemandeClassementOut,
-    DemandeReleveIn, DemandeReleveOut,
-    EtudiantRead,
-    MonClassementOut, ReleveOut, SemestreNotesOut,
+    ClassementCompletOut,
+    DemandeReleve_EnseignantIn, DemandeReleveOut,
+    ReleveOut,
 )
 from app.services import (
     calculer_notes_semestre,
-    get_etudiant_by_user_id,
-    mon_classement,
+    classement_departement,
+    classement_filiere,
+    get_enseignant_by_user_id,
 )
 
-router = APIRouter(prefix="/api/v1/notes/etudiant", tags=["Étudiant"])
+router = APIRouter(prefix="/api/v1/notes/enseignant", tags=["Enseignant"])
 
 
-# ── Profil étudiant ───────────────────────────────────────────────────────────
+# ── Classements ───────────────────────────────────────────────────────────────
 
-@router.get("/me", response_model=EtudiantRead,
-            summary="Mon profil étudiant (filière, CNE, etc.)")
-def mon_profil(
+@router.get("/etudiants-filiere/{filiere_id}",
+            summary="Étudiants d'une filière (pour demande de relevé)")
+def etudiants_de_filiere(
+    filiere_id: int,
     db:   Session = Depends(get_db),
-    user: dict    = Depends(require_student),
+    user: dict    = Depends(require_teacher),
 ):
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable. Contactez l'administration.")
-    return etudiant
+    """Retourne les étudiants inscrits dans une filière — utilisé pour les relevés enseignant."""
+    from app.models import Etudiant as EtudiantModel
+    rows = db.query(EtudiantModel).filter(
+        EtudiantModel.calendar_filiere_id == filiere_id
+    ).order_by(EtudiantModel.nom).all()
+    return [{"id": e.id, "cne": e.cne, "prenom": e.prenom, "nom": e.nom} for e in rows]
 
 
-# ── Enseignants de la filière de l'étudiant connecté ─────────────────────────
-
-@router.get("/enseignants-filiere",
-            summary="Enseignants de ma filière (pour le chat délégué)")
-def mes_enseignants(
-    db:   Session = Depends(get_db),
-    user: dict    = Depends(require_student),
-):
-    """
-    Retourne les enseignants qui ont des séances dans la filière de l'étudiant connecté.
-    - Seuls les enseignants avec un user_id Keycloak renseigné peuvent être contactés par chat.
-    - Le champ "peut_chatter" indique si la conversation est possible.
-    Accès réservé aux étudiants et délégués.
-    """
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-
-    filiere_id = etudiant.calendar_filiere_id
-    try:
-        # Essayer d'abord les enseignants de la filière (via séances)
-        resp = httpx.get(
-            f"{settings.MS_CALENDAR_URL}/api/v1/calendar/internal/filieres/{filiere_id}/enseignants",
-            timeout=5.0,
-        )
-        if resp.status_code == 200:
-            enseignants = resp.json().get("enseignants", [])
-        else:
-            enseignants = []
-
-        # Fallback : si aucune séance créée, retourner tous les enseignants du calendrier
-        if not enseignants:
-            resp2 = httpx.get(
-                f"{settings.MS_CALENDAR_URL}/api/v1/calendar/internal/enseignants",
-                timeout=5.0,
-            )
-            if resp2.status_code == 200:
-                enseignants = resp2.json().get("enseignants", [])
-            else:
-                enseignants = []
-
-        # Enrichir avec le flag peut_chatter
-        for e in enseignants:
-            e["peut_chatter"] = bool(e.get("user_id"))
-        return enseignants
-    except Exception:
-        return []
-
-
-# ── Notes ─────────────────────────────────────────────────────────────────────
-
-@router.get("/notes/{semestre_id}", response_model=SemestreNotesOut,
-            summary="Mes notes pour un semestre")
-def mes_notes(
+@router.get("/classements/filiere/{filiere_id}/semestre/{semestre_id}",
+            response_model=ClassementCompletOut,
+            summary="Classement complet des étudiants d'une filière")
+def voir_classement_filiere(
+    filiere_id: int,
     semestre_id: int,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
+    user: dict = Depends(require_teacher),
 ):
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-    return calculer_notes_semestre(db, etudiant, semestre_id)
+    return classement_filiere(db, filiere_id, semestre_id)
+
+
+@router.get("/classements/departement/{departement_id}/semestre/{semestre_id}",
+            response_model=ClassementCompletOut,
+            summary="Classement complet des étudiants d'un département")
+def voir_classement_departement(
+    departement_id: int,
+    semestre_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_teacher),
+):
+    return classement_departement(db, departement_id, semestre_id)
 
 
 # ── Demandes de relevé ────────────────────────────────────────────────────────
 
 @router.post("/demandes-releve", response_model=DemandeReleveOut,
              status_code=status.HTTP_201_CREATED,
-             summary="Faire une demande de relevé de notes")
-def demander_releve(
-    body: DemandeReleveIn,
+             summary="Faire une demande de relevé pour un étudiant")
+def demander_releve_etudiant(
+    body: DemandeReleve_EnseignantIn,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
+    user: dict = Depends(require_teacher),
 ):
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
+    enseignant = get_enseignant_by_user_id(db, user["sub"])
+    if not enseignant:
+        raise HTTPException(404, "Profil enseignant introuvable.")
+
+    etudiant = db.get(Etudiant, body.etudiant_id)
     if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
+        raise HTTPException(404, "Étudiant cible introuvable.")
 
     existant = db.query(DemandeReleve).filter(
         DemandeReleve.demandeur_user_id    == user["sub"],
-        DemandeReleve.etudiant_id          == etudiant.id,
+        DemandeReleve.etudiant_id          == body.etudiant_id,
         DemandeReleve.calendar_semestre_id == body.calendar_semestre_id,
         DemandeReleve.statut               == "en_attente",
     ).first()
     if existant:
         raise HTTPException(status.HTTP_409_CONFLICT,
-                            "Une demande est déjà en attente pour ce semestre.")
+                            "Une demande pour cet étudiant est déjà en attente.")
 
     demande = DemandeReleve(
         demandeur_user_id=user["sub"],
-        role_demandeur="etudiant",
-        etudiant_id=etudiant.id,
+        role_demandeur="enseignant",
+        etudiant_id=body.etudiant_id,
         calendar_semestre_id=body.calendar_semestre_id,
     )
     db.add(demande)
@@ -141,41 +106,23 @@ def demander_releve(
 
 
 @router.get("/mes-demandes-releve", response_model=List[DemandeReleveOut],
-            summary="Toutes mes demandes de relevé")
-def mes_demandes_releve(
+            summary="Toutes mes demandes de relevé (en tant qu'enseignant)")
+def mes_demandes_releve_enseignant(
     db:   Session = Depends(get_db),
-    user: dict    = Depends(require_student),
+    user: dict    = Depends(require_teacher),
 ):
-    """Liste toutes les demandes de relevé de l'étudiant connecté, triées par date décroissante."""
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
+    """Liste toutes les demandes de relevé soumises par cet enseignant."""
     return db.query(DemandeReleve).filter(
-        DemandeReleve.etudiant_id == etudiant.id
+        DemandeReleve.demandeur_user_id == user["sub"]
     ).order_by(DemandeReleve.demande_le.desc()).all()
-
-
-@router.get("/mes-demandes-classement", response_model=List[DemandeClassementOut],
-            summary="Toutes mes demandes de classement")
-def mes_demandes_classement(
-    db:   Session = Depends(get_db),
-    user: dict    = Depends(require_student),
-):
-    """Liste toutes les demandes de classement de l'étudiant connecté, triées par date décroissante."""
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-    return db.query(DemandeClassement).filter(
-        DemandeClassement.etudiant_id == etudiant.id
-    ).order_by(DemandeClassement.demande_le.desc()).all()
 
 
 @router.get("/demandes-releve/{demande_id}", response_model=DemandeReleveOut,
             summary="Statut d'une demande de relevé")
-def statut_demande_releve(
+def statut_demande(
     demande_id: int,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
+    user: dict = Depends(require_teacher),
 ):
     demande = db.query(DemandeReleve).filter(DemandeReleve.id == demande_id).first()
     if not demande or demande.demandeur_user_id != user["sub"]:
@@ -184,11 +131,11 @@ def statut_demande_releve(
 
 
 @router.get("/releves/{demande_id}", response_model=ReleveOut,
-            summary="Récupérer son relevé de notes (après approbation)")
-def telecharger_releve(
+            summary="Récupérer le relevé d'un étudiant (après approbation)")
+def telecharger_releve_etudiant(
     demande_id: int,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
+    user: dict = Depends(require_teacher),
 ):
     demande = db.query(DemandeReleve).filter(DemandeReleve.id == demande_id).first()
     if not demande or demande.demandeur_user_id != user["sub"]:
@@ -206,77 +153,3 @@ def telecharger_releve(
         etudiant_nom=f"{etudiant.prenom} {etudiant.nom}",
         notes=notes,
     )
-
-
-# ── Demandes de classement ────────────────────────────────────────────────────
-
-@router.post("/demandes-classement", response_model=DemandeClassementOut,
-             status_code=status.HTTP_201_CREATED,
-             summary="Faire une demande de classement")
-def demander_classement(
-    body: DemandeClassementIn,
-    db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
-):
-    if body.type_classement not in ("filiere", "departement"):
-        raise HTTPException(422, "type_classement doit être 'filiere' ou 'departement'.")
-
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-
-    existant = db.query(DemandeClassement).filter(
-        DemandeClassement.etudiant_id          == etudiant.id,
-        DemandeClassement.calendar_semestre_id == body.calendar_semestre_id,
-        DemandeClassement.type_classement      == body.type_classement,
-        DemandeClassement.statut               == "en_attente",
-    ).first()
-    if existant:
-        raise HTTPException(status.HTTP_409_CONFLICT,
-                            "Une demande de classement est déjà en attente.")
-
-    demande = DemandeClassement(
-        etudiant_id=etudiant.id,
-        calendar_semestre_id=body.calendar_semestre_id,
-        type_classement=body.type_classement,
-    )
-    db.add(demande)
-    db.commit()
-    db.refresh(demande)
-    return demande
-
-
-@router.get("/demandes-classement/{demande_id}", response_model=DemandeClassementOut,
-            summary="Statut d'une demande de classement")
-def statut_demande_classement(
-    demande_id: int,
-    db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
-):
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-    demande = db.query(DemandeClassement).filter(DemandeClassement.id == demande_id).first()
-    if not demande or demande.etudiant_id != etudiant.id:
-        raise HTTPException(404, "Demande introuvable.")
-    return demande
-
-
-@router.get("/classements/{demande_id}", response_model=MonClassementOut,
-            summary="Récupérer son classement (après approbation)")
-def voir_mon_classement(
-    demande_id: int,
-    db: Session = Depends(get_db),
-    user: dict = Depends(require_student),
-):
-    etudiant = get_etudiant_by_user_id(db, user["sub"])
-    if not etudiant:
-        raise HTTPException(404, "Profil étudiant introuvable.")
-    demande = db.query(DemandeClassement).filter(DemandeClassement.id == demande_id).first()
-    if not demande or demande.etudiant_id != etudiant.id:
-        raise HTTPException(404, "Demande introuvable.")
-    if demande.statut == "en_attente":
-        raise HTTPException(202, "Demande en attente de validation par l'admin.")
-    if demande.statut == "rejete":
-        raise HTTPException(403, f"Demande rejetée : {demande.motif_rejet or 'sans motif'}.")
-    return mon_classement(db, etudiant, demande)

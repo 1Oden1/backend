@@ -1,0 +1,570 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║          ENT Salé — Docker Compose Global (production-ready)            ║
+# ║  Lance l'intégralité de la plateforme en une seule commande :           ║
+# ║      docker compose up -d                                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &always-restart
+  restart: unless-stopped
+
+x-healthcheck-defaults: &hc-defaults
+  interval: 15s
+  timeout: 10s
+  retries: 5
+  start_period: 30s
+
+services:
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  INFRASTRUCTURE  ████████████████████████████████████████████████████████
+# ══════════════════════════════════════════════════════════════════════════════
+
+  # ── MySQL 8.0 ──────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ent_mysql
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE:      keycloak
+      MYSQL_USER:          ${MYSQL_USER:-ent_user}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD:-ent_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./ms-auth/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - ms-auth_default
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
+             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password}"]
+      <<: *hc-defaults
+      start_period: 60s
+
+  # ── Keycloak 25 ────────────────────────────────────────────────────────────
+  keycloak:
+    image: keycloak/keycloak:25.0
+    container_name: ent_keycloak
+    <<: *always-restart
+    logging: *default-logging
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN:          ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_password}
+      KC_DB:                   mysql
+      KC_DB_URL:               jdbc:mysql://mysql:3306/keycloak
+      KC_DB_USERNAME:          ${MYSQL_USER:-ent_user}
+      KC_DB_PASSWORD:          ${MYSQL_PASSWORD:-ent_password}
+      KC_HTTP_PORT:            8080
+      KC_HOSTNAME_STRICT:      "false"
+      KC_HTTP_ENABLED:         "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ms-auth/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    networks:
+      - ms-auth_default
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/master || exit 1"]
+      <<: *hc-defaults
+      start_period: 90s
+
+  # ── Cassandra 4.1 ──────────────────────────────────────────────────────────
+  cassandra:
+    image: cassandra:4.1
+    container_name: ent_cassandra
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      CASSANDRA_CLUSTER_NAME: ENTCluster
+      CASSANDRA_DC:           datacenter1
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - ms-upload_default
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 90s
+
+  # ── MinIO ──────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: ent_minio
+    <<: *always-restart
+    logging: *default-logging
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ACCESS_KEY:-ent_user}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-ent_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - ms-upload_default
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      <<: *hc-defaults
+
+  # ── RabbitMQ 3.13 ──────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ent_rabbitmq
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ent_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-ent_password}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ent_rabbitmq_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      <<: *hc-defaults
+
+  # ── Ollama (LLM local) ─────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ent_ollama
+    <<: *always-restart
+    logging: *default-logging
+    # GPU NVIDIA — décommenter si disponible :
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - ms-ia_default
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # ── Pull automatique du modèle IA ──────────────────────────────────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ent_ollama_pull
+    restart: "no"
+    entrypoint: >
+      sh -c "
+        echo 'Attente Ollama...' &&
+        until ollama list > /dev/null 2>&1; do sleep 3; done &&
+        echo 'Téléchargement du modèle ${OLLAMA_MODEL:-llama3}...' &&
+        ollama pull ${OLLAMA_MODEL:-llama3} &&
+        echo 'Modèle prêt.'
+      "
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    networks:
+      - ms-ia_default
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  MICROSERVICES  ██████████████████████████████████████████████████████████
+# ══════════════════════════════════════════════════════════════════════════════
+
+  # ── MS-Auth ────────────────────────────────────────────────────────────────
+  ms-auth:
+    build:
+      context:    ./ms-auth
+      dockerfile: Dockerfile
+    image: ent/ms-auth:${IMAGE_TAG:-latest}
+    container_name: ent_ms_auth
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      KEYCLOAK_URL:            http://keycloak:8080
+      KEYCLOAK_REALM:          ${KEYCLOAK_REALM:-ent-sale}
+      KEYCLOAK_CLIENT_ID:      ${KEYCLOAK_CLIENT_ID:-ent-backend}
+      KEYCLOAK_CLIENT_SECRET:  ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
+    ports:
+      - "8001:8000"
+    networks:
+      - ms-auth_default
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Upload ──────────────────────────────────────────────────────────────
+  ms-upload:
+    build:
+      context:    ./ms-upload
+      dockerfile: Dockerfile
+    image: ent/ms-upload:${IMAGE_TAG:-latest}
+    container_name: ent_ms_upload
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      MINIO_ENDPOINT:   minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-ent_user}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-ent_password}
+      MINIO_BUCKET:     ${MINIO_BUCKET:-ent-courses}
+      CASSANDRA_HOST:   ent_cassandra
+      CASSANDRA_KEYSPACE: ent_files
+      KEYCLOAK_URL:     http://keycloak:8080
+      KEYCLOAK_REALM:   ${KEYCLOAK_REALM:-ent-sale}
+      JWT_ALGORITHM:    RS256
+      MAX_FILE_SIZE_MB: 50
+    ports:
+      - "8002:8000"
+    networks:
+      - ms-upload_default
+      - ms-auth_default
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Download ────────────────────────────────────────────────────────────
+  ms-download:
+    build:
+      context:    ./ms-download
+      dockerfile: Dockerfile
+    image: ent/ms-download:${IMAGE_TAG:-latest}
+    container_name: ent_ms_download
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      MINIO_ENDPOINT:        minio:9000
+      MINIO_ENDPOINT_PUBLIC: ${HOST_IP:-localhost}:9000
+      MINIO_ACCESS_KEY:      ${MINIO_ACCESS_KEY:-ent_user}
+      MINIO_SECRET_KEY:      ${MINIO_SECRET_KEY:-ent_password}
+      MINIO_BUCKET:          ${MINIO_BUCKET:-ent-courses}
+      CASSANDRA_HOST:        ent_cassandra
+      CASSANDRA_KEYSPACE:    ent_files
+      KEYCLOAK_URL:          http://keycloak:8080
+      KEYCLOAK_REALM:        ${KEYCLOAK_REALM:-ent-sale}
+      JWT_ALGORITHM:         RS256
+    ports:
+      - "8003:8000"
+    networks:
+      - ms-upload_default
+      - ms-auth_default
+    depends_on:
+      ms-upload:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Calendar ────────────────────────────────────────────────────────────
+  ms-calendar:
+    build:
+      context:    ./ms-calendar
+      dockerfile: Dockerfile
+    image: ent/ms-calendar:${IMAGE_TAG:-latest}
+    container_name: ent_ms_calendar
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      MYSQL_HOST:     mysql
+      MYSQL_PORT:     3306
+      MYSQL_USER:     ${MYSQL_USER:-ent_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ent_password}
+      MYSQL_DATABASE: ent_calendar
+      KEYCLOAK_URL:   http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-ent-sale}
+      JWT_ALGORITHM:  RS256
+      RABBITMQ_URL:   amqp://${RABBITMQ_USER:-ent_user}:${RABBITMQ_PASS:-ent_password}@rabbitmq:5672/
+    ports:
+      - "8004:8000"
+    networks:
+      - ms-auth_default
+      - ms-calendar_default
+      - ent_rabbitmq_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Notes ───────────────────────────────────────────────────────────────
+  ms-notes:
+    build:
+      context:    ./ms-notes
+      dockerfile: Dockerfile
+    image: ent/ms-notes:${IMAGE_TAG:-latest}
+    container_name: ent_ms_notes
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      MYSQL_HOST:              mysql
+      MYSQL_PORT:              3306
+      MYSQL_USER:              ${MYSQL_USER:-ent_user}
+      MYSQL_PASSWORD:          ${MYSQL_PASSWORD:-ent_password}
+      MYSQL_DATABASE:          ent_notes
+      KEYCLOAK_URL:            http://keycloak:8080
+      KEYCLOAK_REALM:          ${KEYCLOAK_REALM:-ent-sale}
+      KEYCLOAK_CLIENT_ID:      ${KEYCLOAK_CLIENT_ID:-ent-backend}
+      JWT_ALGORITHM:           RS256
+      RABBITMQ_URL:            amqp://${RABBITMQ_USER:-ent_user}:${RABBITMQ_PASS:-ent_password}@rabbitmq:5672/
+      MS_CALENDAR_URL:         http://ms-calendar:8000
+      MS_MESSAGING_URL:        http://ms-messaging:8000
+      INTERNAL_SERVICE_TOKEN:  ""
+    ports:
+      - "8005:8000"
+    networks:
+      - ms-auth_default
+      - ms-calendar_default
+      - ms-notes_default
+      - ent_rabbitmq_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ms-calendar:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Admin ───────────────────────────────────────────────────────────────
+  ms-admin:
+    build:
+      context:    ./ms-admin
+      dockerfile: Dockerfile
+    image: ent/ms-admin:${IMAGE_TAG:-latest}
+    container_name: ent_ms_admin
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      CASSANDRA_HOST:          ent_cassandra
+      CASSANDRA_KEYSPACE:      ent_files
+      MINIO_ENDPOINT:          minio:9000
+      MINIO_ACCESS_KEY:        ${MINIO_ACCESS_KEY:-ent_user}
+      MINIO_SECRET_KEY:        ${MINIO_SECRET_KEY:-ent_password}
+      MINIO_BUCKET:            ${MINIO_BUCKET:-ent-courses}
+      KEYCLOAK_URL:            http://keycloak:8080
+      KEYCLOAK_REALM:          ${KEYCLOAK_REALM:-ent-sale}
+      KEYCLOAK_ADMIN_USER:     ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_password}
+      KEYCLOAK_CLIENT_ID:      ${KEYCLOAK_CLIENT_ID:-ent-backend}
+      JWT_ALGORITHM:           RS256
+      MS_CALENDAR_URL:         http://ms-calendar:8000
+      MS_NOTES_URL:            http://ms-notes:8000
+      MS_MESSAGING_URL:        http://ms-messaging:8000
+      MS_UPLOAD_URL:           http://ms-upload:8000
+      MS_DOWNLOAD_URL:         http://ms-download:8000
+    ports:
+      - "8006:8000"
+    networks:
+      - ms-auth_default
+      - ms-upload_default
+      - ms-calendar_default
+      - ms-notes_default
+      - ent_rabbitmq_net
+    depends_on:
+      ms-notes:
+        condition: service_healthy
+      ms-calendar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-Messaging ───────────────────────────────────────────────────────────
+  ms-messaging:
+    build:
+      context:    ./ms-messaging
+      dockerfile: Dockerfile
+    image: ent/ms-messaging:${IMAGE_TAG:-latest}
+    container_name: ent_ms_messaging
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      CASSANDRA_HOST:          ent_cassandra
+      CASSANDRA_KEYSPACE:      ent_messaging
+      RABBITMQ_URL:            amqp://${RABBITMQ_USER:-ent_user}:${RABBITMQ_PASS:-ent_password}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE:       ent.events
+      RABBITMQ_QUEUE:          ms_messaging_queue
+      KEYCLOAK_URL:            http://keycloak:8080
+      KEYCLOAK_REALM:          ${KEYCLOAK_REALM:-ent-sale}
+      KEYCLOAK_ADMIN_USER:     ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_password}
+      KEYCLOAK_CLIENT_ID:      ${KEYCLOAK_CLIENT_ID:-ent-backend}
+      JWT_ALGORITHM:           RS256
+      MS_NOTES_URL:            http://ms-notes:8000
+      MS_CALENDAR_URL:         http://ms-calendar:8000
+      MS_ADMIN_URL:            http://ms-admin:8000
+    ports:
+      - "8007:8000"
+    networks:
+      - ms-auth_default
+      - ms-upload_default
+      - ms-calendar_default
+      - ms-notes_default
+      - ent_rabbitmq_net
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── MS-IA ──────────────────────────────────────────────────────────────────
+  ms-ia:
+    build:
+      context:    ./ms-ia
+      dockerfile: Dockerfile
+    image: ent/ms-ia:${IMAGE_TAG:-latest}
+    container_name: ent_ms_ia
+    <<: *always-restart
+    logging: *default-logging
+    environment:
+      OLLAMA_URL:           http://ollama:11434
+      OLLAMA_MODEL:         ${OLLAMA_MODEL:-llama3}
+      KEYCLOAK_URL:         http://keycloak:8080
+      KEYCLOAK_REALM:       ${KEYCLOAK_REALM:-ent-sale}
+      JWT_ALGORITHM:        RS256
+      MAX_HISTORY_MESSAGES: 20
+      MAX_PROMPT_CHARS:     4000
+    ports:
+      - "8008:8000"
+    networks:
+      - ms-auth_default
+      - ms-ia_default
+    depends_on:
+      ollama:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      <<: *hc-defaults
+
+  # ── Frontend (Nginx) ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context:    ./frontend
+      dockerfile: Dockerfile
+    image: ent/frontend:${IMAGE_TAG:-latest}
+    container_name: ent_frontend
+    <<: *always-restart
+    logging: *default-logging
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - ms-auth_default
+      - ms-upload_default
+      - ms-calendar_default
+      - ms-notes_default
+      - ent_rabbitmq_net
+      - ms-ia_default
+    depends_on:
+      ms-auth:
+        condition: service_healthy
+      ms-upload:
+        condition: service_healthy
+      ms-download:
+        condition: service_healthy
+      ms-calendar:
+        condition: service_healthy
+      ms-notes:
+        condition: service_healthy
+      ms-admin:
+        condition: service_healthy
+      ms-messaging:
+        condition: service_healthy
+      ms-ia:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      <<: *hc-defaults
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  VOLUMES  ████████████████████████████████████████████████████████████████
+# ══════════════════════════════════════════════════════════════════════════════
+
+volumes:
+  mysql_data:
+    name: ent_mysql_data
+  cassandra_data:
+    name: ent_cassandra_data
+  minio_data:
+    name: ent_minio_data
+  rabbitmq_data:
+    name: ent_rabbitmq_data
+  ollama_data:
+    name: ent_ollama_data
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  NETWORKS  ███████████████████████████████████████████████████████████████
+# ══════════════════════════════════════════════════════════════════════════════
+
+networks:
+  ms-auth_default:
+    name: ms-auth_default
+    driver: bridge
+
+  ms-upload_default:
+    name: ms-upload_default
+    driver: bridge
+
+  ms-calendar_default:
+    name: ms-calendar_default
+    driver: bridge
+
+  ms-notes_default:
+    name: ms-notes_default
+    driver: bridge
+
+  ent_rabbitmq_net:
+    name: ent_rabbitmq_net
+    driver: bridge
+
+  ms-ia_default:
+    name: ms-ia_default
+    driver: bridge

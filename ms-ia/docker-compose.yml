@@ -1,0 +1,73 @@
+services:
+
+  # ── Ollama (moteur LLM local) ───────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ent_ollama
+    restart: unless-stopped
+    # Pour activer le GPU NVIDIA, décommenter les lignes ci-dessous
+    # et s'assurer que nvidia-container-toolkit est installé sur l'hôte.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # ── Téléchargement automatique du modèle au premier démarrage ───────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ent_ollama_pull
+    restart: "no"
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for Ollama to be ready...' &&
+        until ollama list > /dev/null 2>&1; do sleep 3; done &&
+        echo 'Pulling model ${OLLAMA_MODEL:-llama3}...' &&
+        ollama pull ${OLLAMA_MODEL:-llama3} &&
+        echo 'Model ready.'
+      "
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # ── Microservice IA ─────────────────────────────────────────────────────────
+  ms-ia:
+    build: .
+    container_name: ent_ms_ia
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3:latest
+      KEYCLOAK_URL: http://ent_keycloak:8080
+      KEYCLOAK_REALM: ent-sale
+      JWT_ALGORITHM: RS256
+      MAX_HISTORY_MESSAGES: 20
+      MAX_PROMPT_CHARS: 4000
+    ports:
+      - "8008:8000"
+    depends_on:
+      - ollama
+    networks:
+      - default
+      - ms-auth_default     # accès Keycloak
+
+networks:
+  ms-auth_default:
+    external: true
+
+volumes:
+  ollama_data:

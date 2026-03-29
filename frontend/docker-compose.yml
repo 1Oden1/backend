@@ -11,6 +11,7 @@ services:
       - ./admin:/usr/share/nginx/html/admin:ro
       - ./etudiant:/usr/share/nginx/html/etudiant:ro
       - ./enseignant:/usr/share/nginx/html/enseignant:ro
+      - ./ia-chat.js:/usr/share/nginx/html/ia-chat.js:ro   # widget IA partagé
     networks:
       - default
       - ms-auth_default
@@ -19,6 +20,7 @@ services:
       - ms-admin_default
       - ms-calendar_default
       - ms-notes_default
+      - ms-ia_default          # ← réseau du microservice IA
       - ent_rabbitmq_net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/health"]
@@ -46,6 +48,9 @@ networks:
     external: true
 
   ms-notes_default:
+    external: true
+
+  ms-ia_default:
     external: true
 
   ent_rabbitmq_net:

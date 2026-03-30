@@ -3115,243 +3115,7 @@ if (initAuth()) {
 
 })(); // IIFE
 </script>
-<script src="ia-chat.js">
-/* ══════════════════════════════════════════════════════════════
-   FONCTIONS D'ÉDITION
-══════════════════════════════════════════════════════════════ */
-
-/* ── Utilisateurs Keycloak ── */
-window.editUser = function(id, firstName, lastName, email, role, enabled) {
-  ge('editUserId').value        = id;
-  ge('editUserFirstName').value = firstName;
-  ge('editUserLastName').value  = lastName;
-  ge('editUserEmail').value     = email;
-  ge('editUserRole').value      = role || 'etudiant';
-  ge('editUserEnabled').value   = enabled ? 'true' : 'false';
-  openModal('modalEditUser');
-};
-window.updateUser = function() {
-  var id = ge('editUserId').value;
-  var body = {
-    first_name: val('editUserFirstName'),
-    last_name:  val('editUserLastName'),
-    email:      val('editUserEmail'),
-    enabled:    ge('editUserEnabled').value === 'true',
-    roles:      [val('editUserRole')]
-  };
-  if (!body.first_name || !body.last_name || !body.email) { showToast('Prénom, nom et email requis','error'); return; }
-  api('PUT', '/api/admin/users/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Utilisateur modifié ✓','success'); closeModal('modalEditUser'); loadUsers(); }
-    else errToast(r);
-  });
-};
-window.resetPassword = function(id) {
-  ge('resetPwdUserId').value = id;
-  ge('resetPwdValue').value  = '';
-  ge('resetPwdTemp').checked = false;
-  openModal('modalResetPassword');
-};
-window.confirmResetPassword = function() {
-  var id  = ge('resetPwdUserId').value;
-  var pwd = val('resetPwdValue');
-  var tmp = ge('resetPwdTemp').checked;
-  if (!pwd || pwd.length < 8) { showToast('Mot de passe trop court (min. 8 caractères)','error'); return; }
-  api('POST', '/api/admin/users/'+id+'/reset-password', {new_password: pwd, temporary: tmp}).then(function(r) {
-    if (r.ok || r.status===204) { showToast('Mot de passe réinitialisé ✓','success'); closeModal('modalResetPassword'); }
-    else errToast(r);
-  });
-};
-
-
-/* ── Années ── */
-window.editAnnee = function(id, label) {
-  ge('editAnneeId').value    = id;
-  ge('editAnneeLabel').value = label;
-  openModal('modalEditAnnee');
-};
-window.updateAnnee = function() {
-  var id = ge('editAnneeId').value;
-  var label = val('editAnneeLabel');
-  if (!label) { showToast('Libellé requis','error'); return; }
-  api('PUT', '/api/admin/calendar/annees/'+id, {label: label}).then(function(r) {
-    if (r.ok) { showToast('Année modifiée ✓','success'); closeModal('modalEditAnnee'); loadAnnees(); }
-    else errToast(r);
-  });
-};
-
-/* ── Départements ── */
-window.editDept = function(id, nom) {
-  ge('editDeptId').value  = id;
-  ge('editDeptNom').value = nom;
-  openModal('modalEditDept');
-};
-window.updateDept = function() {
-  var id = ge('editDeptId').value;
-  var nom = val('editDeptNom');
-  if (!nom) { showToast('Nom requis','error'); return; }
-  api('PUT', '/api/admin/calendar/departements/'+id, {nom: nom}).then(function(r) {
-    if (r.ok) { showToast('Département modifié ✓','success'); closeModal('modalEditDept'); loadDepts(); }
-    else errToast(r);
-  });
-};
-
-/* ── Filières ── */
-window.editFiliere = function(id, nom, deptId) {
-  ge('editFiliereId').value     = id;
-  ge('editFiliereNom').value    = nom;
-  ge('editFiliereDeptId').value = deptId;
-  openModal('modalEditFiliere');
-};
-window.updateFiliere = function() {
-  var id = ge('editFiliereId').value;
-  var nom = val('editFiliereNom'), deptId = num('editFiliereDeptId');
-  if (!nom || isNaN(deptId)) { showToast('Nom et département requis','error'); return; }
-  api('PUT', '/api/admin/calendar/filieres/'+id, {nom: nom, departement_id: deptId}).then(function(r) {
-    if (r.ok) { showToast('Filière modifiée ✓','success'); closeModal('modalEditFiliere'); loadFilieres(); }
-    else errToast(r);
-  });
-};
-
-/* ── Semestres ── */
-window.editSemestre = function(id, nom, deadline) {
-  ge('editSemestreId').value       = id;
-  ge('editSemestreNom').value      = nom;
-  ge('editSemestreDeadline').value = deadline || '';
-  openModal('modalEditSemestre');
-};
-window.updateSemestre = function() {
-  var id = ge('editSemestreId').value;
-  var nom = val('editSemestreNom'), deadline = val('editSemestreDeadline');
-  if (!nom) { showToast('Nom requis','error'); return; }
-  var body = {nom: nom};
-  if (deadline) body.date_limite_depot = deadline;
-  api('PUT', '/api/admin/calendar/semestres/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Semestre modifié ✓','success'); closeModal('modalEditSemestre'); window.loadSemestres(); }
-    else errToast(r);
-  });
-};
-
-/* ── Modules ── */
-window.editModule = function(id, nom, code, credit) {
-  ge('editModuleId').value     = id;
-  ge('editModuleNom').value    = nom;
-  ge('editModuleCode').value   = code;
-  ge('editModuleCredit').value = credit;
-  openModal('modalEditModule');
-};
-window.updateModule = function() {
-  var id = ge('editModuleId').value;
-  var body = {nom: val('editModuleNom'), code: val('editModuleCode'), credit: num('editModuleCredit')};
-  if (!body.nom || !body.code || isNaN(body.credit)) { showToast('Nom, code et crédit requis','error'); return; }
-  api('PUT', '/api/admin/calendar/modules/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Module modifié ✓','success'); closeModal('modalEditModule'); window.loadModules(); }
-    else errToast(r);
-  });
-};
-
-/* ── Éléments ── */
-window.editElement = function(id, nom, code, coeff, type) {
-  ge('editElementId').value    = id;
-  ge('editElementNom').value   = nom;
-  ge('editElementCode').value  = code;
-  ge('editElementCoeff').value = coeff;
-  ge('editElementType').value  = type;
-  openModal('modalEditElement');
-};
-window.updateElement = function() {
-  var id = ge('editElementId').value;
-  var body = {nom: val('editElementNom'), code: val('editElementCode'), coefficient: parseFloat(ge('editElementCoeff').value), type: val('editElementType')};
-  if (!body.nom || !body.code || isNaN(body.coefficient)) { showToast('Nom, code et coefficient requis','error'); return; }
-  api('PUT', '/api/admin/calendar/elements/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Élément modifié ✓','success'); closeModal('modalEditElement'); window.loadModules(); }
-    else errToast(r);
-  });
-};
-
-/* ── Salles ── */
-window.editSalle = function(id, nom, capacite, type) {
-  ge('editSalleId').value       = id;
-  ge('editSalleNom').value      = nom;
-  ge('editSalleCapacite').value = capacite || '';
-  ge('editSalleType').value     = type || '';
-  openModal('modalEditSalle');
-};
-window.updateSalle = function() {
-  var id = ge('editSalleId').value;
-  var cap = ge('editSalleCapacite').value;
-  var body = {nom: val('editSalleNom'), type: val('editSalleType')};
-  if (cap) body.capacite = parseInt(cap, 10);
-  if (!body.nom) { showToast('Nom requis','error'); return; }
-  api('PUT', '/api/admin/calendar/salles/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Salle modifiée ✓','success'); closeModal('modalEditSalle'); loadSalles(); }
-    else errToast(r);
-  });
-};
-
-/* ── Séances ── */
-window.editSeance = function(id, jour, debut, fin) {
-  ge('editSeanceId').value         = id;
-  ge('editSeanceJour').value       = jour;
-  ge('editSeanceDebut').value      = debut;
-  ge('editSeanceFin').value        = fin;
-  openModal('modalEditSeance');
-};
-window.updateSeance = function() {
-  var id = ge('editSeanceId').value;
-  var body = {
-    jour: val('editSeanceJour'),
-    heure_debut: val('editSeanceDebut'),
-    heure_fin: val('editSeanceFin'),
-    element_module_id: num('editSeanceElementId'),
-    enseignant_id: num('editSeanceEnseignantId'),
-    salle_id: num('editSeanceSalleId')
-  };
-  if (!body.jour || !body.heure_debut || !body.heure_fin || isNaN(body.element_module_id) || isNaN(body.enseignant_id) || isNaN(body.salle_id)) {
-    showToast('Tous les champs sont requis','error'); return;
-  }
-  api('PUT', '/api/admin/calendar/seances/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Séance modifiée ✓','success'); closeModal('modalEditSeance'); window.loadSeances(); }
-    else errToast(r);
-  });
-};
-
-/* ── Étudiants ms-notes ── */
-window.editEtudiant = function(id, cne, prenom, nom, filiereId) {
-  ge('editEtudiantId').value       = id;
-  ge('editEtudiantCne').value      = cne;
-  ge('editEtudiantPrenom').value   = prenom;
-  ge('editEtudiantNom').value      = nom;
-  ge('editEtudiantFiliereId').value= filiereId;
-  openModal('modalEditEtudiant');
-};
-window.updateEtudiant = function() {
-  var id = ge('editEtudiantId').value;
-  var body = {cne: val('editEtudiantCne'), prenom: val('editEtudiantPrenom'), nom: val('editEtudiantNom'), calendar_filiere_id: num('editEtudiantFiliereId')};
-  if (!body.cne || !body.prenom || !body.nom || isNaN(body.calendar_filiere_id)) { showToast('Tous les champs requis','error'); return; }
-  api('PUT', '/api/admin/notes/admin/etudiants/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Étudiant modifié ✓','success'); closeModal('modalEditEtudiant'); loadEtudiants(); }
-    else errToast(r);
-  });
-};
-
-/* ── Enseignants ms-notes ── */
-window.editEnseignantNotes = function(id, prenom, nom, deptId) {
-  ge('editEnseignantNotesId').value      = id;
-  ge('editEnseignantNotesPrenom').value  = prenom;
-  ge('editEnseignantNotesNom').value     = nom;
-  ge('editEnseignantNotesDeptId').value  = deptId;
-  openModal('modalEditEnseignantNotes');
-};
-window.updateEnseignantNotes = function() {
-  var id = ge('editEnseignantNotesId').value;
-  var body = {prenom: val('editEnseignantNotesPrenom'), nom: val('editEnseignantNotesNom'), calendar_departement_id: num('editEnseignantNotesDeptId')};
-  if (!body.prenom || !body.nom || isNaN(body.calendar_departement_id)) { showToast('Tous les champs requis','error'); return; }
-  api('PUT', '/api/admin/notes/admin/enseignants/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Enseignant modifié ✓','success'); closeModal('modalEditEnseignantNotes'); loadEnseignantsNotes(); }
-    else errToast(r);
-  });
-};
-</script>
+<script src="ia-chat.js"></script>
 
 <!-- ══ MODALES D'ÉDITION ══ -->
 
@@ -3592,5 +3356,243 @@ window.updateEnseignantNotes = function() {
   </div>
 </div>
 
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   FONCTIONS D'ÉDITION
+══════════════════════════════════════════════════════════════ */
+
+/* ── Utilisateurs Keycloak ── */
+window.editUser = function(id, firstName, lastName, email, role, enabled) {
+  ge('editUserId').value        = id;
+  ge('editUserFirstName').value = firstName;
+  ge('editUserLastName').value  = lastName;
+  ge('editUserEmail').value     = email;
+  ge('editUserRole').value      = role || 'etudiant';
+  ge('editUserEnabled').value   = enabled ? 'true' : 'false';
+  openModal('modalEditUser');
+};
+window.updateUser = function() {
+  var id = ge('editUserId').value;
+  var body = {
+    first_name: val('editUserFirstName'),
+    last_name:  val('editUserLastName'),
+    email:      val('editUserEmail'),
+    enabled:    ge('editUserEnabled').value === 'true',
+    roles:      [val('editUserRole')]
+  };
+  if (!body.first_name || !body.last_name || !body.email) { showToast('Prénom, nom et email requis','error'); return; }
+  api('PUT', '/api/admin/users/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Utilisateur modifié ✓','success'); closeModal('modalEditUser'); loadUsers(); }
+    else errToast(r);
+  });
+};
+window.resetPassword = function(id) {
+  ge('resetPwdUserId').value = id;
+  ge('resetPwdValue').value  = '';
+  ge('resetPwdTemp').checked = false;
+  openModal('modalResetPassword');
+};
+window.confirmResetPassword = function() {
+  var id  = ge('resetPwdUserId').value;
+  var pwd = val('resetPwdValue');
+  var tmp = ge('resetPwdTemp').checked;
+  if (!pwd || pwd.length < 8) { showToast('Mot de passe trop court (min. 8 caractères)','error'); return; }
+  api('POST', '/api/admin/users/'+id+'/reset-password', {new_password: pwd, temporary: tmp}).then(function(r) {
+    if (r.ok || r.status===204) { showToast('Mot de passe réinitialisé ✓','success'); closeModal('modalResetPassword'); }
+    else errToast(r);
+  });
+};
+
+
+/* ── Années ── */
+window.editAnnee = function(id, label) {
+  ge('editAnneeId').value    = id;
+  ge('editAnneeLabel').value = label;
+  openModal('modalEditAnnee');
+};
+window.updateAnnee = function() {
+  var id = ge('editAnneeId').value;
+  var label = val('editAnneeLabel');
+  if (!label) { showToast('Libellé requis','error'); return; }
+  api('PUT', '/api/admin/calendar/annees/'+id, {label: label}).then(function(r) {
+    if (r.ok) { showToast('Année modifiée ✓','success'); closeModal('modalEditAnnee'); loadAnnees(); }
+    else errToast(r);
+  });
+};
+
+/* ── Départements ── */
+window.editDept = function(id, nom) {
+  ge('editDeptId').value  = id;
+  ge('editDeptNom').value = nom;
+  openModal('modalEditDept');
+};
+window.updateDept = function() {
+  var id = ge('editDeptId').value;
+  var nom = val('editDeptNom');
+  if (!nom) { showToast('Nom requis','error'); return; }
+  api('PUT', '/api/admin/calendar/departements/'+id, {nom: nom}).then(function(r) {
+    if (r.ok) { showToast('Département modifié ✓','success'); closeModal('modalEditDept'); loadDepts(); }
+    else errToast(r);
+  });
+};
+
+/* ── Filières ── */
+window.editFiliere = function(id, nom, deptId) {
+  ge('editFiliereId').value     = id;
+  ge('editFiliereNom').value    = nom;
+  ge('editFiliereDeptId').value = deptId;
+  openModal('modalEditFiliere');
+};
+window.updateFiliere = function() {
+  var id = ge('editFiliereId').value;
+  var nom = val('editFiliereNom'), deptId = num('editFiliereDeptId');
+  if (!nom || isNaN(deptId)) { showToast('Nom et département requis','error'); return; }
+  api('PUT', '/api/admin/calendar/filieres/'+id, {nom: nom, departement_id: deptId}).then(function(r) {
+    if (r.ok) { showToast('Filière modifiée ✓','success'); closeModal('modalEditFiliere'); loadFilieres(); }
+    else errToast(r);
+  });
+};
+
+/* ── Semestres ── */
+window.editSemestre = function(id, nom, deadline) {
+  ge('editSemestreId').value       = id;
+  ge('editSemestreNom').value      = nom;
+  ge('editSemestreDeadline').value = deadline || '';
+  openModal('modalEditSemestre');
+};
+window.updateSemestre = function() {
+  var id = ge('editSemestreId').value;
+  var nom = val('editSemestreNom'), deadline = val('editSemestreDeadline');
+  if (!nom) { showToast('Nom requis','error'); return; }
+  var body = {nom: nom};
+  if (deadline) body.date_limite_depot = deadline;
+  api('PUT', '/api/admin/calendar/semestres/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Semestre modifié ✓','success'); closeModal('modalEditSemestre'); window.loadSemestres(); }
+    else errToast(r);
+  });
+};
+
+/* ── Modules ── */
+window.editModule = function(id, nom, code, credit) {
+  ge('editModuleId').value     = id;
+  ge('editModuleNom').value    = nom;
+  ge('editModuleCode').value   = code;
+  ge('editModuleCredit').value = credit;
+  openModal('modalEditModule');
+};
+window.updateModule = function() {
+  var id = ge('editModuleId').value;
+  var body = {nom: val('editModuleNom'), code: val('editModuleCode'), credit: num('editModuleCredit')};
+  if (!body.nom || !body.code || isNaN(body.credit)) { showToast('Nom, code et crédit requis','error'); return; }
+  api('PUT', '/api/admin/calendar/modules/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Module modifié ✓','success'); closeModal('modalEditModule'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+/* ── Éléments ── */
+window.editElement = function(id, nom, code, coeff, type) {
+  ge('editElementId').value    = id;
+  ge('editElementNom').value   = nom;
+  ge('editElementCode').value  = code;
+  ge('editElementCoeff').value = coeff;
+  ge('editElementType').value  = type;
+  openModal('modalEditElement');
+};
+window.updateElement = function() {
+  var id = ge('editElementId').value;
+  var body = {nom: val('editElementNom'), code: val('editElementCode'), coefficient: parseFloat(ge('editElementCoeff').value), type: val('editElementType')};
+  if (!body.nom || !body.code || isNaN(body.coefficient)) { showToast('Nom, code et coefficient requis','error'); return; }
+  api('PUT', '/api/admin/calendar/elements/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Élément modifié ✓','success'); closeModal('modalEditElement'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+/* ── Salles ── */
+window.editSalle = function(id, nom, capacite, type) {
+  ge('editSalleId').value       = id;
+  ge('editSalleNom').value      = nom;
+  ge('editSalleCapacite').value = capacite || '';
+  ge('editSalleType').value     = type || '';
+  openModal('modalEditSalle');
+};
+window.updateSalle = function() {
+  var id = ge('editSalleId').value;
+  var cap = ge('editSalleCapacite').value;
+  var body = {nom: val('editSalleNom'), type: val('editSalleType')};
+  if (cap) body.capacite = parseInt(cap, 10);
+  if (!body.nom) { showToast('Nom requis','error'); return; }
+  api('PUT', '/api/admin/calendar/salles/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Salle modifiée ✓','success'); closeModal('modalEditSalle'); loadSalles(); }
+    else errToast(r);
+  });
+};
+
+/* ── Séances ── */
+window.editSeance = function(id, jour, debut, fin) {
+  ge('editSeanceId').value         = id;
+  ge('editSeanceJour').value       = jour;
+  ge('editSeanceDebut').value      = debut;
+  ge('editSeanceFin').value        = fin;
+  openModal('modalEditSeance');
+};
+window.updateSeance = function() {
+  var id = ge('editSeanceId').value;
+  var body = {
+    jour: val('editSeanceJour'),
+    heure_debut: val('editSeanceDebut'),
+    heure_fin: val('editSeanceFin'),
+    element_module_id: num('editSeanceElementId'),
+    enseignant_id: num('editSeanceEnseignantId'),
+    salle_id: num('editSeanceSalleId')
+  };
+  if (!body.jour || !body.heure_debut || !body.heure_fin || isNaN(body.element_module_id) || isNaN(body.enseignant_id) || isNaN(body.salle_id)) {
+    showToast('Tous les champs sont requis','error'); return;
+  }
+  api('PUT', '/api/admin/calendar/seances/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Séance modifiée ✓','success'); closeModal('modalEditSeance'); window.loadSeances(); }
+    else errToast(r);
+  });
+};
+
+/* ── Étudiants ms-notes ── */
+window.editEtudiant = function(id, cne, prenom, nom, filiereId) {
+  ge('editEtudiantId').value       = id;
+  ge('editEtudiantCne').value      = cne;
+  ge('editEtudiantPrenom').value   = prenom;
+  ge('editEtudiantNom').value      = nom;
+  ge('editEtudiantFiliereId').value= filiereId;
+  openModal('modalEditEtudiant');
+};
+window.updateEtudiant = function() {
+  var id = ge('editEtudiantId').value;
+  var body = {cne: val('editEtudiantCne'), prenom: val('editEtudiantPrenom'), nom: val('editEtudiantNom'), calendar_filiere_id: num('editEtudiantFiliereId')};
+  if (!body.cne || !body.prenom || !body.nom || isNaN(body.calendar_filiere_id)) { showToast('Tous les champs requis','error'); return; }
+  api('PUT', '/api/admin/notes/admin/etudiants/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Étudiant modifié ✓','success'); closeModal('modalEditEtudiant'); loadEtudiants(); }
+    else errToast(r);
+  });
+};
+
+/* ── Enseignants ms-notes ── */
+window.editEnseignantNotes = function(id, prenom, nom, deptId) {
+  ge('editEnseignantNotesId').value      = id;
+  ge('editEnseignantNotesPrenom').value  = prenom;
+  ge('editEnseignantNotesNom').value     = nom;
+  ge('editEnseignantNotesDeptId').value  = deptId;
+  openModal('modalEditEnseignantNotes');
+};
+window.updateEnseignantNotes = function() {
+  var id = ge('editEnseignantNotesId').value;
+  var body = {prenom: val('editEnseignantNotesPrenom'), nom: val('editEnseignantNotesNom'), calendar_departement_id: num('editEnseignantNotesDeptId')};
+  if (!body.prenom || !body.nom || isNaN(body.calendar_departement_id)) { showToast('Tous les champs requis','error'); return; }
+  api('PUT', '/api/admin/notes/admin/enseignants/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Enseignant modifié ✓','success'); closeModal('modalEditEnseignantNotes'); loadEnseignantsNotes(); }
+    else errToast(r);
+  });
+};
+</script>
 </body>
 </html>

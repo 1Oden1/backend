@@ -1826,7 +1826,7 @@ window.loadAnnees = function() {
           return '<div class="entity-card">'
             +'<div class="ec-id">ID · ' + a.id + '</div>'
             +'<div class="ec-name">📆 ' + esc(a.label) + '</div>'
-            +'<div class="ec-actions"><button class="btn btn-danger btn-sm" onclick="deleteAnnee('+a.id+')">🗑 Supprimer</button></div>'
+            +'<div class="ec-actions">'+'<button class="btn btn-outline btn-sm" onclick="editAnnee('+a.id+',\''+esc(a.label)+'\')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteAnnee('+a.id+')">🗑</button>'+'</div>'
             +'</div>';
         }).join('') + '</div>'
       + '<p style="font-size:.75rem;color:var(--muted);margin-top:.8rem">'+list.length+' année(s) universitaire(s)</p>';
@@ -1863,7 +1863,7 @@ window.loadDepts = function() {
           return '<div class="entity-card">'
             +'<div class="ec-id">ID · ' + d.id + '</div>'
             +'<div class="ec-name">🏛️ ' + esc(d.nom) + '</div>'
-            +'<div class="ec-actions"><button class="btn btn-danger btn-sm" onclick="deleteDept('+d.id+')">🗑 Supprimer</button></div>'
+            +'<div class="ec-actions">'+'<button class="btn btn-outline btn-sm" onclick="editDept('+d.id+',\''+esc(d.nom)+'\')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteDept('+d.id+')">🗑</button>'+'</div>'
             +'</div>';
         }).join('') + '</div>'
       + '<p style="font-size:.75rem;color:var(--muted);margin-top:.8rem">'+list.length+' département(s)</p>';
@@ -1928,7 +1928,7 @@ window.loadFilieres = function() {
               + '<td><strong>' + f.id + '</strong></td>'
               + '<td style="font-weight:500">🎓 ' + esc(f.nom) + '</td>'
               + '<td><span class="badge badge-enseignant">🏛️ ' + esc(f.deptNom) + '</span></td>'
-              + '<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteFiliere(' + f.id + ')">🗑</button></td>'
+              + '<td class="td-actions">'+ '<button class="btn btn-outline btn-sm" onclick="editFiliere('+f.id+',\''+esc(f.nom)+'\','+f.deptId+')">✏</button> '+ '<button class="btn btn-danger btn-sm" onclick="deleteFiliere(' + f.id + ')">🗑</button></td>'
               + '</tr>';
           }).join('')
         + '</tbody></table></div>'
@@ -1997,7 +1997,7 @@ window.loadSemestres = function() {
             +'<div class="ec-id">ID · '+s.id+'</div>'
             +'<div class="ec-name">📘 '+esc(s.nom)+'</div>'
             +'<div class="ec-sub">'+(s.date_limite_depot ? '📅 Deadline : '+s.date_limite_depot : 'Pas de deadline')+'</div>'
-            +'<div class="ec-actions"><button class="btn btn-danger btn-sm" onclick="deleteSemestre('+s.id+')">🗑</button></div>'
+            +'<div class="ec-actions">'+'<button class="btn btn-outline btn-sm" onclick="editSemestre('+s.id+',\''+esc(s.nom)+'\',\''+esc(s.date_limite_depot||'')+'\')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteSemestre('+s.id+')">🗑</button>'+'</div>'
             +'</div>';
         }).join('') + '</div>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur : '+e.message); });
@@ -2076,7 +2076,7 @@ window.loadModules = function() {
         var elHtml = elements.length
           ? '<table style="width:100%;font-size:.83rem"><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Type</th><th>Coeff.</th><th></th></tr></thead><tbody>'
             + elements.map(function(e){ return '<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.nom)+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.type)+'</td><td>'+e.coefficient+'</td>'
-              +'<td><button class="btn btn-danger btn-sm" style="padding:.1rem .35rem" onclick="deleteElement('+e.id+')">🗑</button></td></tr>'; }).join('')
+              +'<td>'+'<button class="btn btn-outline btn-sm" style="padding:.1rem .3rem" onclick="editElement('+e.id+',\''+esc(e.nom)+'\',\''+esc(e.code)+'\','+e.coefficient+',\''+esc(e.type)+'\')" >✏</button> '+'<button class="btn btn-danger btn-sm" style="padding:.1rem .3rem" onclick="deleteElement('+e.id+')">🗑</button></td></tr>'; }).join('')
             + '</tbody></table>'
           : '<p style="font-size:.82rem;color:var(--muted)">Aucun élément.</p>';
         results[i] = '<div style="background:var(--cream);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.8rem">'
@@ -2084,7 +2084,7 @@ window.loadModules = function() {
           +'<strong>['+esc(m.code)+'] '+esc(m.nom)+'</strong>'
           +'<div style="display:flex;align-items:center;gap:.5rem">'
           +'<span style="font-size:.78rem;color:var(--muted)">ID: '+m.id+' · '+m.credit+' crédit(s)</span>'
-          +'<button class="btn btn-danger btn-sm" onclick="deleteModule('+m.id+')">🗑 Module</button>'
+          +'<button class="btn btn-outline btn-sm" onclick="editModule('+m.id+',\''+esc(m.nom)+'\',\''+esc(m.code)+'\','+m.credit+')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteModule('+m.id+')">🗑</button>'
           +'</div></div>'
           + elHtml + '</div>';
       }).catch(function() { results[i] = ''; })
@@ -2221,7 +2221,7 @@ window.loadSalles = function() {
     wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Nom</th><th>Capacité</th><th>Type</th><th>Actions</th></tr></thead><tbody>'
       + list.map(function(s) {
           return '<tr><td><strong>'+s.id+'</strong></td><td>'+esc(s.nom)+'</td><td>'+(s.capacite||'—')+'</td><td>'+esc(s.type||'—')+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteSalle('+s.id+')">🗑</button></td></tr>';
+            +'<td class="td-actions">'+'<button class="btn btn-outline btn-sm" onclick="editSalle('+s.id+',\''+esc(s.nom)+'\','+(s.capacite||0)+',\''+esc(s.type||'')+'\')" >✏</button> '+'<button class="btn btn-danger btn-sm" onclick="deleteSalle('+s.id+')">🗑</button></td></tr>';
         }).join('') + '</tbody></table>'
       + '<p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">'+list.length+' salle(s)</p>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur salles — '+e.message); });
@@ -2316,7 +2316,7 @@ window.loadSeances = function() {
             +'<td>'+esc(s.element_module)+' <span style="font-size:.75rem;color:var(--muted)">('+esc(s.type_seance)+')</span></td>'
             +'<td>'+esc(s.enseignant_prenom)+' '+esc(s.enseignant_nom)+'</td>'
             +'<td>'+esc(s.salle)+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteSeance('+s.id+')">🗑</button></td></tr>';
+            +'<td class="td-actions">'+'<button class="btn btn-outline btn-sm" onclick="editSeance('+s.id+',\''+esc(s.jour)+'\',\''+esc(s.heure_debut)+'\',\''+esc(s.heure_fin)+'\')" >✏</button> '+'<button class="btn btn-danger btn-sm" onclick="deleteSeance('+s.id+')">🗑</button></td></tr>';
         }).join('') + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur séances ('+e.message+')'); });
 };
@@ -2361,7 +2361,7 @@ window.loadEtudiants = function() {
           var fNom = _filieresMap[e.calendar_filiere_id] || ('ID '+e.calendar_filiere_id);
           return '<tr><td>'+e.id+'</td><td>'+esc(e.cne||'—')+'</td><td>'+esc(e.prenom||'—')+'</td><td>'+esc(e.nom||'—')+'</td>'
             +'<td>'+esc(fNom)+'</td>'
-            +'<td class="td-actions"><button class="btn btn-danger btn-sm" onclick="deleteEtudiant('+e.id+')">🗑</button></td></tr>';
+            +'<td class="td-actions">'+'<button class="btn btn-outline btn-sm" onclick="editEtudiant('+e.id+',\''+esc(e.cne||'')+'\',\''+esc(e.prenom||'')+'\',\''+esc(e.nom||'')+'\','+e.calendar_filiere_id+')">✏</button> '+'<button class="btn btn-danger btn-sm" onclick="deleteEtudiant('+e.id+')">🗑</button></td></tr>';
         }).join('') + '</tbody></table>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur étudiants ('+e.message+')'); });
 }
@@ -2402,6 +2402,7 @@ window.loadEnseignantsNotes = function() {
               ? '<code style="font-size:.68rem;color:var(--muted)">'+esc(e.user_id.substring(0,8))+'…</code>'
               : '<span style="color:crimson;font-size:.75rem">⚠ Non lié</span>')+'</td>'
             +'<td class="td-actions">'
+            +'<button class="btn btn-outline btn-sm" onclick="editEnseignantNotes('+e.id+',\''+esc(e.prenom)+'\',\''+esc(e.nom)+'\','+e.calendar_departement_id+')">✏</button> '
             +'<button class="btn btn-danger btn-sm" onclick="deleteEnseignantNotes('+e.id+')">🗑</button>'
             +'</td></tr>';
         }).join('') + '</tbody></table>';
@@ -3112,6 +3113,387 @@ if (initAuth()) {
 
 })(); // IIFE
 </script>
-<script src="ia-chat.js"></script>
+<script src="ia-chat.js">
+/* ══════════════════════════════════════════════════════════════
+   FONCTIONS D'ÉDITION
+══════════════════════════════════════════════════════════════ */
+
+/* ── Années ── */
+window.editAnnee = function(id, label) {
+  ge('editAnneeId').value    = id;
+  ge('editAnneeLabel').value = label;
+  openModal('modalEditAnnee');
+};
+window.updateAnnee = function() {
+  var id = ge('editAnneeId').value;
+  var label = val('editAnneeLabel');
+  if (!label) { showToast('Libellé requis','error'); return; }
+  api('PUT', '/api/admin/calendar/annees/'+id, {label: label}).then(function(r) {
+    if (r.ok) { showToast('Année modifiée ✓','success'); closeModal('modalEditAnnee'); loadAnnees(); }
+    else errToast(r);
+  });
+};
+
+/* ── Départements ── */
+window.editDept = function(id, nom) {
+  ge('editDeptId').value  = id;
+  ge('editDeptNom').value = nom;
+  openModal('modalEditDept');
+};
+window.updateDept = function() {
+  var id = ge('editDeptId').value;
+  var nom = val('editDeptNom');
+  if (!nom) { showToast('Nom requis','error'); return; }
+  api('PUT', '/api/admin/calendar/departements/'+id, {nom: nom}).then(function(r) {
+    if (r.ok) { showToast('Département modifié ✓','success'); closeModal('modalEditDept'); loadDepts(); }
+    else errToast(r);
+  });
+};
+
+/* ── Filières ── */
+window.editFiliere = function(id, nom, deptId) {
+  ge('editFiliereId').value     = id;
+  ge('editFiliereNom').value    = nom;
+  ge('editFiliereDeptId').value = deptId;
+  openModal('modalEditFiliere');
+};
+window.updateFiliere = function() {
+  var id = ge('editFiliereId').value;
+  var nom = val('editFiliereNom'), deptId = num('editFiliereDeptId');
+  if (!nom || isNaN(deptId)) { showToast('Nom et département requis','error'); return; }
+  api('PUT', '/api/admin/calendar/filieres/'+id, {nom: nom, departement_id: deptId}).then(function(r) {
+    if (r.ok) { showToast('Filière modifiée ✓','success'); closeModal('modalEditFiliere'); loadFilieres(); }
+    else errToast(r);
+  });
+};
+
+/* ── Semestres ── */
+window.editSemestre = function(id, nom, deadline) {
+  ge('editSemestreId').value       = id;
+  ge('editSemestreNom').value      = nom;
+  ge('editSemestreDeadline').value = deadline || '';
+  openModal('modalEditSemestre');
+};
+window.updateSemestre = function() {
+  var id = ge('editSemestreId').value;
+  var nom = val('editSemestreNom'), deadline = val('editSemestreDeadline');
+  if (!nom) { showToast('Nom requis','error'); return; }
+  var body = {nom: nom};
+  if (deadline) body.date_limite_depot = deadline;
+  api('PUT', '/api/admin/calendar/semestres/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Semestre modifié ✓','success'); closeModal('modalEditSemestre'); window.loadSemestres(); }
+    else errToast(r);
+  });
+};
+
+/* ── Modules ── */
+window.editModule = function(id, nom, code, credit) {
+  ge('editModuleId').value     = id;
+  ge('editModuleNom').value    = nom;
+  ge('editModuleCode').value   = code;
+  ge('editModuleCredit').value = credit;
+  openModal('modalEditModule');
+};
+window.updateModule = function() {
+  var id = ge('editModuleId').value;
+  var body = {nom: val('editModuleNom'), code: val('editModuleCode'), credit: num('editModuleCredit')};
+  if (!body.nom || !body.code || isNaN(body.credit)) { showToast('Nom, code et crédit requis','error'); return; }
+  api('PUT', '/api/admin/calendar/modules/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Module modifié ✓','success'); closeModal('modalEditModule'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+/* ── Éléments ── */
+window.editElement = function(id, nom, code, coeff, type) {
+  ge('editElementId').value    = id;
+  ge('editElementNom').value   = nom;
+  ge('editElementCode').value  = code;
+  ge('editElementCoeff').value = coeff;
+  ge('editElementType').value  = type;
+  openModal('modalEditElement');
+};
+window.updateElement = function() {
+  var id = ge('editElementId').value;
+  var body = {nom: val('editElementNom'), code: val('editElementCode'), coefficient: parseFloat(ge('editElementCoeff').value), type: val('editElementType')};
+  if (!body.nom || !body.code || isNaN(body.coefficient)) { showToast('Nom, code et coefficient requis','error'); return; }
+  api('PUT', '/api/admin/calendar/elements/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Élément modifié ✓','success'); closeModal('modalEditElement'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+/* ── Salles ── */
+window.editSalle = function(id, nom, capacite, type) {
+  ge('editSalleId').value       = id;
+  ge('editSalleNom').value      = nom;
+  ge('editSalleCapacite').value = capacite || '';
+  ge('editSalleType').value     = type || '';
+  openModal('modalEditSalle');
+};
+window.updateSalle = function() {
+  var id = ge('editSalleId').value;
+  var cap = ge('editSalleCapacite').value;
+  var body = {nom: val('editSalleNom'), type: val('editSalleType')};
+  if (cap) body.capacite = parseInt(cap, 10);
+  if (!body.nom) { showToast('Nom requis','error'); return; }
+  api('PUT', '/api/admin/calendar/salles/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Salle modifiée ✓','success'); closeModal('modalEditSalle'); loadSalles(); }
+    else errToast(r);
+  });
+};
+
+/* ── Séances ── */
+window.editSeance = function(id, jour, debut, fin) {
+  ge('editSeanceId').value         = id;
+  ge('editSeanceJour').value       = jour;
+  ge('editSeanceDebut').value      = debut;
+  ge('editSeanceFin').value        = fin;
+  openModal('modalEditSeance');
+};
+window.updateSeance = function() {
+  var id = ge('editSeanceId').value;
+  var body = {
+    jour: val('editSeanceJour'),
+    heure_debut: val('editSeanceDebut'),
+    heure_fin: val('editSeanceFin'),
+    element_module_id: num('editSeanceElementId'),
+    enseignant_id: num('editSeanceEnseignantId'),
+    salle_id: num('editSeanceSalleId')
+  };
+  if (!body.jour || !body.heure_debut || !body.heure_fin || isNaN(body.element_module_id) || isNaN(body.enseignant_id) || isNaN(body.salle_id)) {
+    showToast('Tous les champs sont requis','error'); return;
+  }
+  api('PUT', '/api/admin/calendar/seances/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Séance modifiée ✓','success'); closeModal('modalEditSeance'); window.loadSeances(); }
+    else errToast(r);
+  });
+};
+
+/* ── Étudiants ms-notes ── */
+window.editEtudiant = function(id, cne, prenom, nom, filiereId) {
+  ge('editEtudiantId').value       = id;
+  ge('editEtudiantCne').value      = cne;
+  ge('editEtudiantPrenom').value   = prenom;
+  ge('editEtudiantNom').value      = nom;
+  ge('editEtudiantFiliereId').value= filiereId;
+  openModal('modalEditEtudiant');
+};
+window.updateEtudiant = function() {
+  var id = ge('editEtudiantId').value;
+  var body = {cne: val('editEtudiantCne'), prenom: val('editEtudiantPrenom'), nom: val('editEtudiantNom'), calendar_filiere_id: num('editEtudiantFiliereId')};
+  if (!body.cne || !body.prenom || !body.nom || isNaN(body.calendar_filiere_id)) { showToast('Tous les champs requis','error'); return; }
+  api('PUT', '/api/admin/notes/admin/etudiants/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Étudiant modifié ✓','success'); closeModal('modalEditEtudiant'); loadEtudiants(); }
+    else errToast(r);
+  });
+};
+
+/* ── Enseignants ms-notes ── */
+window.editEnseignantNotes = function(id, prenom, nom, deptId) {
+  ge('editEnseignantNotesId').value      = id;
+  ge('editEnseignantNotesPrenom').value  = prenom;
+  ge('editEnseignantNotesNom').value     = nom;
+  ge('editEnseignantNotesDeptId').value  = deptId;
+  openModal('modalEditEnseignantNotes');
+};
+window.updateEnseignantNotes = function() {
+  var id = ge('editEnseignantNotesId').value;
+  var body = {prenom: val('editEnseignantNotesPrenom'), nom: val('editEnseignantNotesNom'), calendar_departement_id: num('editEnseignantNotesDeptId')};
+  if (!body.prenom || !body.nom || isNaN(body.calendar_departement_id)) { showToast('Tous les champs requis','error'); return; }
+  api('PUT', '/api/admin/notes/admin/enseignants/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Enseignant modifié ✓','success'); closeModal('modalEditEnseignantNotes'); loadEnseignantsNotes(); }
+    else errToast(r);
+  });
+};
+</script>
+
+<!-- ══ MODALES D'ÉDITION ══ -->
+
+<!-- Edit Année -->
+<div class="modal-overlay" id="modalEditAnnee">
+  <div class="modal">
+    <h3>Modifier l'année universitaire</h3>
+    <input type="hidden" id="editAnneeId"/>
+    <div class="form-group"><label>Libellé</label><input type="text" id="editAnneeLabel" placeholder="ex: 2024-2025"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditAnnee')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateAnnee()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Département -->
+<div class="modal-overlay" id="modalEditDept">
+  <div class="modal">
+    <h3>Modifier le département</h3>
+    <input type="hidden" id="editDeptId"/>
+    <div class="form-group"><label>Nom</label><input type="text" id="editDeptNom"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditDept')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateDept()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Filière -->
+<div class="modal-overlay" id="modalEditFiliere">
+  <div class="modal">
+    <h3>Modifier la filière</h3>
+    <input type="hidden" id="editFiliereId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom</label><input type="text" id="editFiliereNom"/></div>
+      <div class="form-group full"><label>ID Département</label><input type="number" id="editFiliereDeptId" placeholder="1"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditFiliere')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateFiliere()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Semestre -->
+<div class="modal-overlay" id="modalEditSemestre">
+  <div class="modal">
+    <h3>Modifier le semestre</h3>
+    <input type="hidden" id="editSemestreId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom</label><input type="text" id="editSemestreNom"/></div>
+      <div class="form-group full"><label>Date limite dépôt (optionnel)</label><input type="date" id="editSemestreDeadline"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditSemestre')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateSemestre()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Module -->
+<div class="modal-overlay" id="modalEditModule">
+  <div class="modal">
+    <h3>Modifier le module</h3>
+    <input type="hidden" id="editModuleId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom</label><input type="text" id="editModuleNom"/></div>
+      <div class="form-group"><label>Code</label><input type="text" id="editModuleCode"/></div>
+      <div class="form-group"><label>Crédit</label><input type="number" id="editModuleCredit" min="1" max="10"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditModule')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateModule()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Élément de module -->
+<div class="modal-overlay" id="modalEditElement">
+  <div class="modal">
+    <h3>Modifier l'élément de module</h3>
+    <input type="hidden" id="editElementId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom</label><input type="text" id="editElementNom"/></div>
+      <div class="form-group"><label>Code</label><input type="text" id="editElementCode"/></div>
+      <div class="form-group"><label>Coefficient</label><input type="number" id="editElementCoeff" step="0.5" min="0.5"/></div>
+      <div class="form-group"><label>Type</label>
+        <select id="editElementType">
+          <option value="Cours">Cours</option>
+          <option value="TD">TD</option>
+          <option value="TP">TP</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditElement')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateElement()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Salle -->
+<div class="modal-overlay" id="modalEditSalle">
+  <div class="modal">
+    <h3>Modifier la salle</h3>
+    <input type="hidden" id="editSalleId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom / Numéro</label><input type="text" id="editSalleNom"/></div>
+      <div class="form-group"><label>Capacité</label><input type="number" id="editSalleCapacite" min="1"/></div>
+      <div class="form-group"><label>Type</label>
+        <select id="editSalleType">
+          <option value="">— Non précisé —</option>
+          <option value="Amphithéâtre">Amphithéâtre</option>
+          <option value="Salle TD">Salle TD</option>
+          <option value="Salle TP">Salle TP</option>
+          <option value="Salle Info">Salle Info</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditSalle')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateSalle()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Séance -->
+<div class="modal-overlay" id="modalEditSeance">
+  <div class="modal">
+    <h3>Modifier la séance</h3>
+    <input type="hidden" id="editSeanceId"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Jour</label>
+        <select id="editSeanceJour">
+          <option value="Lundi">Lundi</option><option value="Mardi">Mardi</option>
+          <option value="Mercredi">Mercredi</option><option value="Jeudi">Jeudi</option>
+          <option value="Vendredi">Vendredi</option><option value="Samedi">Samedi</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Heure début</label><input type="time" id="editSeanceDebut"/></div>
+      <div class="form-group"><label>Heure fin</label><input type="time" id="editSeanceFin"/></div>
+      <div class="form-group"><label>ID Élément module</label><input type="number" id="editSeanceElementId" placeholder="ID depuis Modules"/></div>
+      <div class="form-group"><label>ID Enseignant</label><input type="number" id="editSeanceEnseignantId" placeholder="ID depuis Enseignants"/></div>
+      <div class="form-group"><label>ID Salle</label><input type="number" id="editSeanceSalleId" placeholder="ID depuis Salles"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditSeance')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateSeance()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Étudiant ms-notes -->
+<div class="modal-overlay" id="modalEditEtudiant">
+  <div class="modal">
+    <h3>Modifier l'étudiant</h3>
+    <input type="hidden" id="editEtudiantId"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>CNE</label><input type="text" id="editEtudiantCne"/></div>
+      <div class="form-group"><label>Prénom</label><input type="text" id="editEtudiantPrenom"/></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="editEtudiantNom"/></div>
+      <div class="form-group full"><label>ID Filière</label><input type="number" id="editEtudiantFiliereId"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditEtudiant')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateEtudiant()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Enseignant ms-notes -->
+<div class="modal-overlay" id="modalEditEnseignantNotes">
+  <div class="modal">
+    <h3>Modifier l'enseignant (ms-notes)</h3>
+    <input type="hidden" id="editEnseignantNotesId"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Prénom</label><input type="text" id="editEnseignantNotesPrenom"/></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="editEnseignantNotesNom"/></div>
+      <div class="form-group full"><label>ID Département</label><input type="number" id="editEnseignantNotesDeptId"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditEnseignantNotes')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateEnseignantNotes()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

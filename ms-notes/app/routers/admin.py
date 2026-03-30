@@ -172,6 +172,25 @@ async def delete_etudiant(
     await publish_student_deleted(user_id, filiere_id)
 
 
+@router.put("/etudiants/{etudiant_id}", response_model=EtudiantRead)
+async def update_etudiant(
+    etudiant_id: int,
+    body: EtudiantIn,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    obj = db.get(Etudiant, etudiant_id)
+    if not obj:
+        raise HTTPException(404, "Étudiant introuvable.")
+    obj.cne                 = body.cne
+    obj.prenom              = body.prenom
+    obj.nom                 = body.nom
+    obj.calendar_filiere_id = body.calendar_filiere_id
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # Enseignants
 # ════════════════════════════════════════════════════════════════════════════
@@ -230,6 +249,24 @@ async def delete_enseignant(
     db.delete(obj)
     db.commit()
     await publish_teacher_deleted(user_id)
+
+
+@router.put("/enseignants/{enseignant_id}", response_model=EnseignantRead)
+async def update_enseignant(
+    enseignant_id: int,
+    body: EnseignantIn,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    obj = db.get(Enseignant, enseignant_id)
+    if not obj:
+        raise HTTPException(404, "Enseignant introuvable.")
+    obj.prenom                  = body.prenom
+    obj.nom                     = body.nom
+    obj.calendar_departement_id = body.calendar_departement_id
+    db.commit()
+    db.refresh(obj)
+    return obj
 
 
 # ════════════════════════════════════════════════════════════════════════════

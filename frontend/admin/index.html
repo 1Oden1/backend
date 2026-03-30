@@ -1747,24 +1747,25 @@ window.deleteUser = function(id) {
 };
 
 window.copyUUID = function(uuid, btn) {
-  navigator.clipboard.writeText(uuid).then(function() {
-    var old = btn.textContent;
+  var old = btn.textContent;
+  /* execCommand fonctionne en HTTP/réseau local, contrairement à navigator.clipboard */
+  var ta = document.createElement('textarea');
+  ta.value = uuid;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
     btn.textContent = '✓';
     btn.style.color = 'green';
     setTimeout(function() { btn.textContent = old; btn.style.color = ''; }, 1500);
     showToast('UUID copié ✓', 'success');
-  }).catch(function() {
-    /* fallback pour navigateurs sans clipboard API */
-    var ta = document.createElement('textarea');
-    ta.value = uuid;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('UUID copié ✓', 'success');
-  });
+  } catch(e) {
+    /* Dernier recours : afficher l'UUID dans une prompt */
+    prompt('Copiez cet UUID (Ctrl+C) :', uuid);
+  }
+  document.body.removeChild(ta);
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2073,12 +2074,18 @@ window.loadModules = function() {
         if (r.ok) return r.json(); return [];
       }).then(function(elements) {
         var elHtml = elements.length
-          ? '<table style="width:100%;font-size:.83rem"><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Type</th><th>Coeff.</th></tr></thead><tbody>'
-            + elements.map(function(e){ return '<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.nom)+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.type)+'</td><td>'+e.coefficient+'</td></tr>'; }).join('')
+          ? '<table style="width:100%;font-size:.83rem"><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Type</th><th>Coeff.</th><th></th></tr></thead><tbody>'
+            + elements.map(function(e){ return '<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.nom)+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.type)+'</td><td>'+e.coefficient+'</td>'
+              +'<td><button class="btn btn-danger btn-sm" style="padding:.1rem .35rem" onclick="deleteElement('+e.id+')">🗑</button></td></tr>'; }).join('')
             + '</tbody></table>'
           : '<p style="font-size:.82rem;color:var(--muted)">Aucun élément.</p>';
         results[i] = '<div style="background:var(--cream);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.8rem">'
-          +'<div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><strong>['+esc(m.code)+'] '+esc(m.nom)+'</strong><span style="font-size:.78rem;color:var(--muted)">ID: '+m.id+' · '+m.credit+' crédit(s)</span></div>'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">'
+          +'<strong>['+esc(m.code)+'] '+esc(m.nom)+'</strong>'
+          +'<div style="display:flex;align-items:center;gap:.5rem">'
+          +'<span style="font-size:.78rem;color:var(--muted)">ID: '+m.id+' · '+m.credit+' crédit(s)</span>'
+          +'<button class="btn btn-danger btn-sm" onclick="deleteModule('+m.id+')">🗑 Module</button>'
+          +'</div></div>'
           + elHtml + '</div>';
       }).catch(function() { results[i] = ''; })
       .then(function() {
@@ -2104,6 +2111,22 @@ window.createElementModule = function() {
   if (!body.nom || !body.code || isNaN(body.module_id)) { showToast('Nom, code et ID module requis','error'); return; }
   api('POST', '/api/admin/calendar/elements', body).then(function(r) {
     if (r.ok || r.status===201) { showToast('Élément créé ✓','success'); closeModal('modalElement'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+window.deleteModule = function(id) {
+  if (!confirm('Supprimer ce module et tous ses éléments ?')) return;
+  api('DELETE', '/api/admin/calendar/modules/'+id).then(function(r) {
+    if (r.ok || r.status===204) { showToast('Module supprimé ✓','success'); window.loadModules(); }
+    else errToast(r);
+  });
+};
+
+window.deleteElement = function(id) {
+  if (!confirm('Supprimer cet élément de module ?')) return;
+  api('DELETE', '/api/admin/calendar/elements/'+id).then(function(r) {
+    if (r.ok || r.status===204) { showToast('Élément supprimé ✓','success'); window.loadModules(); }
     else errToast(r);
   });
 };

@@ -1717,6 +1717,8 @@ window.loadUsers = function() {
             + '<td>'+(u.roles||[]).map(function(r){ return '<span class="badge badge-'+r+'">'+r+'</span>'; }).join(' ')+'</td>'
             + '<td>'+(u.enabled?'✅':'❌')+'</td>'
             + '<td class="td-actions">'
+            +   '<button class="btn btn-outline btn-sm" onclick="editUser(\''+u.id+'\',\''+esc(u.first_name)+'\',\''+esc(u.last_name)+'\',\''+esc(u.email)+'\',\''+esc((u.roles||[])[0]||'')+'\','+(u.enabled?'true':'false')+')" style="margin-right:.3rem">✏</button>'
+            +   '<button class="btn btn-outline btn-sm" onclick="resetPassword(\''+u.id+'\')" style="margin-right:.3rem" title="Réinitialiser MDP">🔑</button>'
             +   '<button class="btn btn-danger btn-sm" onclick="deleteUser(\''+u.id+'\')">🗑</button>'
             + '</td>'
             + '</tr>';
@@ -3118,6 +3120,49 @@ if (initAuth()) {
    FONCTIONS D'ÉDITION
 ══════════════════════════════════════════════════════════════ */
 
+/* ── Utilisateurs Keycloak ── */
+window.editUser = function(id, firstName, lastName, email, role, enabled) {
+  ge('editUserId').value        = id;
+  ge('editUserFirstName').value = firstName;
+  ge('editUserLastName').value  = lastName;
+  ge('editUserEmail').value     = email;
+  ge('editUserRole').value      = role || 'etudiant';
+  ge('editUserEnabled').value   = enabled ? 'true' : 'false';
+  openModal('modalEditUser');
+};
+window.updateUser = function() {
+  var id = ge('editUserId').value;
+  var body = {
+    first_name: val('editUserFirstName'),
+    last_name:  val('editUserLastName'),
+    email:      val('editUserEmail'),
+    enabled:    ge('editUserEnabled').value === 'true',
+    roles:      [val('editUserRole')]
+  };
+  if (!body.first_name || !body.last_name || !body.email) { showToast('Prénom, nom et email requis','error'); return; }
+  api('PUT', '/api/admin/users/'+id, body).then(function(r) {
+    if (r.ok) { showToast('Utilisateur modifié ✓','success'); closeModal('modalEditUser'); loadUsers(); }
+    else errToast(r);
+  });
+};
+window.resetPassword = function(id) {
+  ge('resetPwdUserId').value = id;
+  ge('resetPwdValue').value  = '';
+  ge('resetPwdTemp').checked = false;
+  openModal('modalResetPassword');
+};
+window.confirmResetPassword = function() {
+  var id  = ge('resetPwdUserId').value;
+  var pwd = val('resetPwdValue');
+  var tmp = ge('resetPwdTemp').checked;
+  if (!pwd || pwd.length < 8) { showToast('Mot de passe trop court (min. 8 caractères)','error'); return; }
+  api('POST', '/api/admin/users/'+id+'/reset-password', {new_password: pwd, temporary: tmp}).then(function(r) {
+    if (r.ok || r.status===204) { showToast('Mot de passe réinitialisé ✓','success'); closeModal('modalResetPassword'); }
+    else errToast(r);
+  });
+};
+
+
 /* ── Années ── */
 window.editAnnee = function(id, label) {
   ge('editAnneeId').value    = id;
@@ -3309,6 +3354,58 @@ window.updateEnseignantNotes = function() {
 </script>
 
 <!-- ══ MODALES D'ÉDITION ══ -->
+
+<!-- Edit Utilisateur Keycloak -->
+<div class="modal-overlay" id="modalEditUser">
+  <div class="modal">
+    <h3>Modifier l'utilisateur Keycloak</h3>
+    <input type="hidden" id="editUserId"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Prénom</label><input type="text" id="editUserFirstName"/></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="editUserLastName"/></div>
+      <div class="form-group full"><label>Email</label><input type="email" id="editUserEmail"/></div>
+      <div class="form-group"><label>Rôle</label>
+        <select id="editUserRole">
+          <option value="etudiant">Étudiant</option>
+          <option value="enseignant">Enseignant</option>
+          <option value="delegue">Délégué</option>
+          <option value="admin">Administrateur</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Statut</label>
+        <select id="editUserEnabled">
+          <option value="true">✅ Actif</option>
+          <option value="false">❌ Désactivé</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalEditUser')">Annuler</button>
+      <button class="btn btn-gold"    onclick="updateUser()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset mot de passe -->
+<div class="modal-overlay" id="modalResetPassword">
+  <div class="modal">
+    <h3>Réinitialiser le mot de passe</h3>
+    <input type="hidden" id="resetPwdUserId"/>
+    <div class="form-group">
+      <label>Nouveau mot de passe</label>
+      <input type="password" id="resetPwdValue" placeholder="Min. 8 caractères"/>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:.6rem;margin-top:.3rem">
+      <input type="checkbox" id="resetPwdTemp" style="width:auto"/>
+      <label style="margin:0;font-size:.83rem">Temporaire (l'utilisateur devra le changer à la connexion)</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal('modalResetPassword')">Annuler</button>
+      <button class="btn btn-gold"    onclick="confirmResetPassword()">Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Edit Année -->
 <div class="modal-overlay" id="modalEditAnnee">

@@ -3113,6 +3113,16 @@ if (initAuth()) {
   loadDashboard();
 }
 
+  /* Exposer les fonctions utilitaires pour le script d'édition externe */
+  window._ge        = ge;
+  window._val       = val;
+  window._num       = num;
+  window._api       = api;
+  window._showToast = showToast;
+  window._errToast  = errToast;
+  window._openModal = openModal;
+  window._closeModal= closeModal;
+
 })(); // IIFE
 </script>
 <script src="ia-chat.js"></script>
@@ -3358,6 +3368,16 @@ if (initAuth()) {
 
 
 <script>
+/* Helpers — récupérés depuis l'IIFE principale via window._ */
+var ge         = function(id) { return document.getElementById(id); };
+var val        = function(id) { return window._val       ? window._val(id)       : (ge(id)?ge(id).value.trim():''); };
+var num        = function(id) { return window._num       ? window._num(id)       : parseInt(ge(id)?ge(id).value:'',10); };
+var api        = function(m,p,b) { return window._api    ? window._api(m,p,b)    : fetch(p,{method:m,headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('token')},body:b?JSON.stringify(b):undefined}); };
+var showToast  = function(msg,t) { if (window._showToast) window._showToast(msg,t); else alert(msg); };
+var errToast   = function(r)     { if (window._errToast)  window._errToast(r);  else r.json().then(function(d){alert(d.detail||'Erreur');}).catch(function(){alert('Erreur '+r.status);}); };
+var openModal  = function(id)    { if (window._openModal)  window._openModal(id);  else { var el=ge(id); if(el) el.classList.add('open'); } };
+var closeModal = function(id)    { if (window._closeModal) window._closeModal(id); else { var el=ge(id); if(el) el.classList.remove('open'); } };
+
 /* ══════════════════════════════════════════════════════════════
    FONCTIONS D'ÉDITION
 ══════════════════════════════════════════════════════════════ */

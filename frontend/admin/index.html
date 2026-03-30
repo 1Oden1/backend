@@ -1999,7 +1999,7 @@ window.loadSemestres = function() {
             +'<div class="ec-id">ID · '+s.id+'</div>'
             +'<div class="ec-name">📘 '+esc(s.nom)+'</div>'
             +'<div class="ec-sub">'+(s.date_limite_depot ? '📅 Deadline : '+s.date_limite_depot : 'Pas de deadline')+'</div>'
-            +'<div class="ec-actions">'+'<button class="btn btn-outline btn-sm" onclick="editSemestre('+s.id+',\''+esc(s.nom)+'\',\''+esc(s.date_limite_depot||'')+'\')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteSemestre('+s.id+')">🗑</button>'+'</div>'
+            +'<div class="ec-actions">'+'<button class="btn btn-outline btn-sm" onclick="editSemestre('+s.id+',\''+esc(s.nom)+'\',\''+esc(s.date_limite_depot||'')+'\','+s.annee_id+','+s.filiere_id+')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteSemestre('+s.id+')">🗑</button>'+'</div>'
             +'</div>';
         }).join('') + '</div>';
   }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur : '+e.message); });
@@ -2086,7 +2086,7 @@ window.loadModules = function() {
           +'<strong>['+esc(m.code)+'] '+esc(m.nom)+'</strong>'
           +'<div style="display:flex;align-items:center;gap:.5rem">'
           +'<span style="font-size:.78rem;color:var(--muted)">ID: '+m.id+' · '+m.credit+' crédit(s)</span>'
-          +'<button class="btn btn-outline btn-sm" onclick="editModule('+m.id+',\''+esc(m.nom)+'\',\''+esc(m.code)+'\','+m.credit+')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteModule('+m.id+')">🗑</button>'
+          +'<button class="btn btn-outline btn-sm" onclick="editModule('+m.id+',\''+esc(m.nom)+'\',\''+esc(m.code)+'\','+m.credit+','+m.semestre_id+')" style="margin-right:.3rem">✏</button>'+'<button class="btn btn-danger btn-sm" onclick="deleteModule('+m.id+')">🗑</button>'
           +'</div></div>'
           + elHtml + '</div>';
       }).catch(function() { results[i] = ''; })
@@ -3228,6 +3228,8 @@ if (initAuth()) {
   <div class="modal">
     <h3>Modifier le semestre</h3>
     <input type="hidden" id="editSemestreId"/>
+    <input type="hidden" id="editSemestreAnneeId"/>
+    <input type="hidden" id="editSemestreFiliereId"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nom</label><input type="text" id="editSemestreNom"/></div>
       <div class="form-group full"><label>Date limite dépôt (optionnel)</label><input type="date" id="editSemestreDeadline"/></div>
@@ -3244,6 +3246,7 @@ if (initAuth()) {
   <div class="modal">
     <h3>Modifier le module</h3>
     <input type="hidden" id="editModuleId"/>
+    <input type="hidden" id="editModuleSemestreId"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nom</label><input type="text" id="editModuleNom"/></div>
       <div class="form-group"><label>Code</label><input type="text" id="editModuleCode"/></div>
@@ -3475,17 +3478,22 @@ window.updateFiliere = function() {
 };
 
 /* ── Semestres ── */
-window.editSemestre = function(id, nom, deadline) {
-  ge('editSemestreId').value       = id;
-  ge('editSemestreNom').value      = nom;
-  ge('editSemestreDeadline').value = deadline || '';
+window.editSemestre = function(id, nom, deadline, anneeId, filiereId) {
+  ge('editSemestreId').value        = id;
+  ge('editSemestreNom').value       = nom;
+  ge('editSemestreDeadline').value  = deadline || '';
+  ge('editSemestreAnneeId').value   = anneeId;
+  ge('editSemestreFiliereId').value = filiereId;
   openModal('modalEditSemestre');
 };
 window.updateSemestre = function() {
-  var id = ge('editSemestreId').value;
-  var nom = val('editSemestreNom'), deadline = val('editSemestreDeadline');
+  var id       = ge('editSemestreId').value;
+  var anneeId  = parseInt(ge('editSemestreAnneeId').value, 10);
+  var filiereId= parseInt(ge('editSemestreFiliereId').value, 10);
+  var nom      = val('editSemestreNom');
+  var deadline = val('editSemestreDeadline');
   if (!nom) { showToast('Nom requis','error'); return; }
-  var body = {nom: nom};
+  var body = {nom: nom, annee_id: anneeId, filiere_id: filiereId};
   if (deadline) body.date_limite_depot = deadline;
   api('PUT', '/api/admin/calendar/semestres/'+id, body).then(function(r) {
     if (r.ok) { showToast('Semestre modifié ✓','success'); closeModal('modalEditSemestre'); window.loadSemestres(); }
@@ -3494,17 +3502,19 @@ window.updateSemestre = function() {
 };
 
 /* ── Modules ── */
-window.editModule = function(id, nom, code, credit) {
-  ge('editModuleId').value     = id;
-  ge('editModuleNom').value    = nom;
-  ge('editModuleCode').value   = code;
-  ge('editModuleCredit').value = credit;
+window.editModule = function(id, nom, code, credit, semestreId) {
+  ge('editModuleId').value         = id;
+  ge('editModuleNom').value        = nom;
+  ge('editModuleCode').value       = code;
+  ge('editModuleCredit').value     = credit;
+  ge('editModuleSemestreId').value = semestreId;
   openModal('modalEditModule');
 };
 window.updateModule = function() {
-  var id = ge('editModuleId').value;
-  var body = {nom: val('editModuleNom'), code: val('editModuleCode'), credit: num('editModuleCredit')};
-  if (!body.nom || !body.code || isNaN(body.credit)) { showToast('Nom, code et crédit requis','error'); return; }
+  var id         = ge('editModuleId').value;
+  var semestreId = parseInt(ge('editModuleSemestreId').value, 10);
+  var body       = {nom: val('editModuleNom'), code: val('editModuleCode'), credit: num('editModuleCredit'), semestre_id: semestreId};
+  if (!body.nom || !body.code || isNaN(body.credit) || isNaN(semestreId)) { showToast('Données incomplètes','error'); return; }
   api('PUT', '/api/admin/calendar/modules/'+id, body).then(function(r) {
     if (r.ok) { showToast('Module modifié ✓','success'); closeModal('modalEditModule'); window.loadModules(); }
     else errToast(r);

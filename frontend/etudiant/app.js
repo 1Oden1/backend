@@ -945,16 +945,30 @@ window.chatSearchUsers = function(q) {
   list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
   _chatSearchTimer = setTimeout(async () => {
     try {
-      // Chercher les enseignants depuis ms-notes (filière du délégué)
-      // Cet endpoint appelle ms-calendar/internal/filieres/{id}/enseignants
-      const r = await api('GET', '/api/notes/etudiant/enseignants-filiere');
-      const rawEns = r.ok ? (await r.json()) : [];
       const q2 = q.toLowerCase();
       const myId = (currentUser && currentUser.id) || '';
-      const enseignants = rawEns.filter(e => e.user_id && e.user_id !== myId);
+
+      // Étape 1 : récupérer la filière du délégué depuis ms-notes
+      const rMe = await api('GET', '/api/notes/etudiant/me');
+      const meData = rMe.ok ? (await rMe.json()) : null;
+      const filiereId = meData ? meData.calendar_filiere_id : null;
+
+      // Étape 2 : récupérer les enseignants de cette filière depuis ms-calendar
+      let enseignants = [];
+      if (filiereId) {
+        const rEns = await api('GET', `/api/calendar/filieres/${filiereId}/enseignants`);
+        enseignants = rEns.ok ? (await rEns.json()) : [];
+      } else {
+        // Fallback : tous les enseignants du calendrier
+        const rEns = await api('GET', '/api/calendar/enseignants');
+        enseignants = rEns.ok ? (await rEns.json()) : [];
+      }
+
       const filtered = enseignants.filter(e =>
-        (e.nom || '').toLowerCase().includes(q2) ||
-        (e.prenom || '').toLowerCase().includes(q2)
+        e.user_id && e.user_id !== myId && (
+          (e.nom || '').toLowerCase().includes(q2) ||
+          (e.prenom || '').toLowerCase().includes(q2)
+        )
       );
       if (!filtered.length) {
         list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun enseignant trouvé.</div>';

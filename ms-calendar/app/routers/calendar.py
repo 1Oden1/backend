@@ -175,6 +175,34 @@ async def delete_filiere(filiere_id: int, db: Session = Depends(get_db), _=Depen
 # SEMESTRES
 # ══════════════════════════════════════════════════════════════════════════════
 
+@router.get("/filieres/{filiere_id}/enseignants",
+            summary="Enseignants ayant des séances dans une filière")
+def get_enseignants_by_filiere(
+    filiere_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """
+    Retourne les enseignants ayant au moins une séance dans la filière donnée.
+    Utilisé par le frontend délégué pour lister les enseignants autorisés au chat.
+    """
+    from sqlalchemy import select as sa_select, distinct
+    rows = db.execute(
+        sa_select(distinct(Enseignant.id), Enseignant.user_id, Enseignant.nom,
+                  Enseignant.prenom, Enseignant.email)
+        .join(Seance,         Seance.enseignant_id      == Enseignant.id)
+        .join(ElementModule,  ElementModule.id           == Seance.element_module_id)
+        .join(Module,         Module.id                  == ElementModule.module_id)
+        .join(Semestre,       Semestre.id                == Module.semestre_id)
+        .where(Semestre.filiere_id == filiere_id)
+    ).fetchall()
+    return [
+        {"id": r[0], "user_id": r[1], "nom": r[2], "prenom": r[3], "email": r[4]}
+        for r in rows
+        if r[1]  # uniquement ceux avec user_id Keycloak
+    ]
+
+
 @router.get("/filieres/{filiere_id}/semestres", response_model=List[SemestreRead])
 def list_semestres(
     filiere_id: int,

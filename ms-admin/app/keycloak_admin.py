@@ -53,6 +53,26 @@ def list_users(search: str = "", max_results: int = 100) -> list[dict]:
     return [_normalize(u) for u in users]
 
 
+def list_users_by_role(role_name: str, max_results: int = 200) -> list[dict]:
+    """Retourne les utilisateurs ayant un rôle realm donné via Keycloak admin."""
+    resp = httpx.get(
+        f"{_ADMIN_BASE}/roles/{role_name}/users",
+        headers=_headers(),
+        params={"max": max_results},
+        timeout=10.0,
+    )
+    resp.raise_for_status()
+    users = resp.json()
+    result = []
+    for u in users:
+        try:
+            u["roles"] = get_user_roles(u["id"])
+        except Exception:
+            u["roles"] = [role_name]
+        result.append(_normalize(u))
+    return result
+
+
 def get_user(user_id: str) -> dict:
     resp = httpx.get(f"{_ADMIN_BASE}/users/{user_id}", headers=_headers())
     resp.raise_for_status()

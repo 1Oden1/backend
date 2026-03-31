@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List
 
-from app.auth import require_admin
+from app.auth import require_admin, require_role
 from app.keycloak_admin import (
-    list_users, get_user, create_user,
+    list_users, list_users_by_role, get_user, create_user,
     update_user, delete_user, reset_password,
     list_realm_roles,
 )
@@ -11,6 +11,32 @@ from app.schemas import UserCreate, UserUpdate, UserRead, PasswordReset
 from app.routers.audit import log_action
 
 router = APIRouter(prefix="/users", tags=["Utilisateurs"])
+
+_require_authenticated = require_role("admin", "enseignant", "etudiant", "delegue")
+
+
+@router.get(
+    "/delegues",
+    response_model=List[UserRead],
+    summary="Lister les délégués (accessible aux enseignants)",
+)
+def list_delegues(_: dict = Depends(_require_authenticated)):
+    try:
+        return list_users_by_role("delegue")
+    except Exception as e:
+        raise HTTPException(502, f"Keycloak indisponible : {e}")
+
+
+@router.get(
+    "/enseignants-kc",
+    response_model=List[UserRead],
+    summary="Lister les enseignants Keycloak (accessible aux authentifiés)",
+)
+def list_enseignants_kc(_: dict = Depends(_require_authenticated)):
+    try:
+        return list_users_by_role("enseignant")
+    except Exception as e:
+        raise HTTPException(502, f"Keycloak indisponible : {e}")
 
 
 @router.get(

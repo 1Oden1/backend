@@ -978,18 +978,14 @@ window.chatSearchUsers = function(q) {
       list.innerHTML = filtered.map(e => {
         const name = `${e.prenom || ''} ${e.nom || ''}`.trim() || `Enseignant #${e.id}`;
         const uid = e.user_id || '';
-        const peutChatter = e.peut_chatter && uid;
-        if (peutChatter) {
-          _chatUsersCache[uid] = { id: uid, name, roles: ['enseignant'] };
-        }
-        return `<div ${peutChatter ? `onclick="selectChatUser('${uid}')"` : ''} data-uid="${uid}"
-          style="padding:.6rem 1rem;${peutChatter ? 'cursor:pointer;' : 'opacity:.5;cursor:not-allowed;'}border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
-          <div style="width:32px;height:32px;border-radius:50%;background:${peutChatter ? 'var(--gold,#C9A84C)' : 'var(--border)'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
+        // user_id présent = enseignant lié à Keycloak (filtré en amont)
+        _chatUsersCache[uid] = { id: uid, name, roles: ['enseignant'] };
+        return `<div onclick="selectChatUser('${uid}')" data-uid="${uid}"
+          style="padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.65rem;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--gold,#C9A84C);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${name[0].toUpperCase()}</div>
           <div>
             <div style="font-weight:600;font-size:.83rem">${escHtml(name)}</div>
-            <div style="font-size:.71rem;color:var(--muted)">
-              ${peutChatter ? 'Enseignant · Disponible pour le chat' : 'Enseignant · Compte non lié — contacter l\'admin'}
-            </div>
+            <div style="font-size:.71rem;color:var(--muted)">Enseignant · Disponible pour le chat</div>
           </div>
         </div>`;
       }).join('');

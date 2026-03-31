@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Etudiant, Enseignant
+from app.models import Etudiant
 
 router = APIRouter(prefix="/internal", tags=["Internal"], include_in_schema=False)
 
@@ -28,14 +28,6 @@ def get_students_of_filiere(
     ).all()
     return {"user_ids": [r.user_id for r in rows]}
 
-
-@router.get("/teachers")
-def get_all_teachers(
-    db: Session = Depends(get_db),
-):
-    """Retourne les user_ids de tous les enseignants — utilisé par ms-messaging broadcast."""
-    rows = db.query(Enseignant.user_id).filter(Enseignant.user_id.isnot(None)).all()
-    return {"user_ids": [r.user_id for r in rows]}
 
 
 @router.get("/student-filiere")

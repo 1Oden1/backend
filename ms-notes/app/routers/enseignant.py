@@ -18,7 +18,6 @@ from app.services import (
     calculer_notes_semestre,
     classement_departement,
     classement_filiere,
-    get_enseignant_by_user_id,
 )
 
 router = APIRouter(prefix="/api/v1/notes/enseignant", tags=["Enseignant"])
@@ -60,10 +59,6 @@ def demander_releve_etudiant(
     db: Session = Depends(get_db),
     user: dict = Depends(require_teacher),
 ):
-    enseignant = get_enseignant_by_user_id(db, user["sub"])
-    if not enseignant:
-        raise HTTPException(404, "Profil enseignant introuvable.")
-
     etudiant = db.get(Etudiant, body.etudiant_id)
     if not etudiant:
         raise HTTPException(404, "Étudiant cible introuvable.")

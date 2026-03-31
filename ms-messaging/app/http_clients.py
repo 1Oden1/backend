@@ -48,30 +48,14 @@ def get_students_of_filiere(filiere_id: int) -> list[str]:
 
 
 def get_all_teachers_user_ids() -> list[str]:
-    """Retourne les user_ids de tous les enseignants.
-    Essaie ms-notes /internal/teachers d'abord, puis ms-calendar comme fallback."""    # Source 1 : ms-notes (enseignants inscrits pour les notes)
-    try:
-        resp = httpx.get(
-            f"{MS_NOTES_URL}/api/v1/notes/internal/teachers",
-            timeout=5.0,
-        )
-        if resp.is_success:
-            ids = resp.json().get("user_ids", [])
-            if ids:
-                return ids
-    except Exception as exc:
-        logger.warning("get_all_teachers_user_ids ms-notes : %s", exc)
-
-    # Fallback : ms-calendar (enseignants avec user_id Keycloak)
-    try:
+    """Retourne les user_ids de tous les enseignants via ms-calendar (source unique)."""    try:
         resp = httpx.get(
             f"{MS_CALENDAR_URL}/api/v1/calendar/internal/enseignants",
             timeout=5.0,
         )
         if resp.is_success:
             enseignants = resp.json().get("enseignants", [])
-            ids = [e["user_id"] for e in enseignants if e.get("user_id")]
-            return ids
+            return [e["user_id"] for e in enseignants if e.get("user_id")]
     except Exception as exc:
         logger.error("get_all_teachers_user_ids ms-calendar : %s", exc)
     return []

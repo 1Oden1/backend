@@ -499,7 +499,6 @@
     <section class="panel" id="panel-notes">
       <div class="tab-bar">
         <button class="tab-btn active" onclick="notesTab(this,'notes-etudiants');loadEtudiants()">👤 Étudiants</button>
-        <button class="tab-btn" onclick="notesTab(this,'notes-enseignants');loadEnseignantsNotes()">👨‍🏫 Enseignants</button>
         <button class="tab-btn" onclick="notesTab(this,'notes-saisie')">✏️ Saisie</button>
         <button class="tab-btn" onclick="notesTab(this,'notes-vue');initVueNotes()">📊 Vue notes</button>
         <button class="tab-btn" onclick="notesTab(this,'notes-publication')">📢 Publication</button>
@@ -523,21 +522,6 @@
         <div id="notesEtudiantContent"></div>
       </div>
 
-      <!-- Enseignants -->
-      <div class="tab-pane" id="notes-enseignants">
-        <div class="section-head">
-          <h3 class="section-title">Enseignants (notes)</h3>
-          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <select id="ensDeptFilter" onchange="loadEnseignantsNotes()"
-              style="padding:.32rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:Jost,sans-serif">
-              <option value="">Tous les départements</option>
-            </select>
-            <button class="btn btn-outline btn-sm" onclick="loadEnseignantsNotes()">↻</button>
-            <button class="btn btn-gold btn-sm" onclick="openModal('modalEnseignantNotes')">+ Enseignant</button>
-          </div>
-        </div>
-        <div id="notesEnseignantContent"></div>
-      </div>
 
       <!-- Saisie -->
       <div class="tab-pane" id="notes-saisie">
@@ -1072,22 +1056,6 @@
   </div>
 </div>
 
-<!-- Enseignant ms-notes -->
-<div class="modal-overlay" id="modalEnseignantNotes">
-  <div class="modal">
-    <h3>Enregistrer un enseignant (ms-notes)</h3>
-    <div class="form-grid">
-      <div class="form-group full"><label>User ID Keycloak</label><input type="text" id="enUserId" placeholder="uuid Keycloak"/></div>
-      <div class="form-group"><label>Prénom</label><input type="text" id="enPrenom" placeholder="Prénom"/></div>
-      <div class="form-group"><label>Nom</label><input type="text" id="enNom" placeholder="Nom"/></div>
-      <div class="form-group full"><label>ID Département (ms-calendar)</label><input type="number" id="enDeptId" placeholder="ex: 1"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-outline" onclick="closeModal('modalEnseignantNotes')">Annuler</button>
-      <button class="btn btn-gold"    onclick="createEnseignantNotes()">Enregistrer</button>
-    </div>
-  </div>
-</div>
 
 <!-- Conversation -->
 <div class="modal-overlay" id="modalConv">
@@ -2078,7 +2046,7 @@ window.loadModules = function() {
         var elHtml = elements.length
           ? '<table style="width:100%;font-size:.83rem"><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Type</th><th>Coeff.</th><th></th></tr></thead><tbody>'
             + elements.map(function(e){ return '<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.nom)+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.type)+'</td><td>'+e.coefficient+'</td>'
-              +'<td>'+'<button class="btn btn-outline btn-sm" style="padding:.1rem .3rem" onclick="editElement('+e.id+',\''+esc(e.nom)+'\',\''+esc(e.code)+'\','+e.coefficient+',\''+esc(e.type)+'\')" >✏</button> '+'<button class="btn btn-danger btn-sm" style="padding:.1rem .3rem" onclick="deleteElement('+e.id+')">🗑</button></td></tr>'; }).join('')
+              +'<td>'+'<button class="btn btn-outline btn-sm" style="padding:.1rem .3rem" onclick="editElement('+e.id+',\''+esc(e.nom)+'\',\''+esc(e.code)+'\','+e.coefficient+',\''+esc(e.type)+'\','+e.module_id+')" >✏</button> '+'<button class="btn btn-danger btn-sm" style="padding:.1rem .3rem" onclick="deleteElement('+e.id+')">🗑</button></td></tr>'; }).join('')
             + '</tbody></table>'
           : '<p style="font-size:.82rem;color:var(--muted)">Aucun élément.</p>';
         results[i] = '<div style="background:var(--cream);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.8rem">'
@@ -2384,48 +2352,7 @@ window.deleteEtudiant = function(id) {
   });
 };
 
-/* Notes — Enseignants */
-window.loadEnseignantsNotes = function() {
-  var wrap = ge('notesEnseignantContent'); if (!wrap) return;
-  var deptId = val('ensDeptFilter');
-  wrap.innerHTML = '<div class="loader"></div>';
-  api('GET', '/api/admin/notes/admin/enseignants').then(function(r) {
-    if (!r.ok) throw new Error(r.status); return r.json();
-  }).then(function(list) {
-    if (deptId) list = list.filter(function(e){ return String(e.calendar_departement_id) === deptId; });
-    if (!list.length) { wrap.innerHTML = empty('👨‍🏫','Aucun enseignant'+(deptId?' pour ce département':'')); return; }
-    wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Prénom</th><th>Nom</th><th>Département</th><th>UUID Keycloak</th><th>Actions</th></tr></thead><tbody>'
-      + list.map(function(e) {
-          var dNom = _deptsMap[e.calendar_departement_id] || ('ID '+e.calendar_departement_id);
-          var hasUid = !!e.user_id;
-          return '<tr><td>'+e.id+'</td><td>'+esc(e.prenom)+'</td><td>'+esc(e.nom)+'</td>'
-            +'<td>'+esc(dNom)+'</td>'
-            +'<td>'+(hasUid
-              ? '<code style="font-size:.68rem;color:var(--muted)">'+esc(e.user_id.substring(0,8))+'…</code>'
-              : '<span style="color:crimson;font-size:.75rem">⚠ Non lié</span>')+'</td>'
-            +'<td class="td-actions">'
-            +'<button class="btn btn-outline btn-sm" onclick="editEnseignantNotes('+e.id+',\''+esc(e.prenom)+'\',\''+esc(e.nom)+'\','+e.calendar_departement_id+')">✏</button> '
-            +'<button class="btn btn-danger btn-sm" onclick="deleteEnseignantNotes('+e.id+')">🗑</button>'
-            +'</td></tr>';
-        }).join('') + '</tbody></table>';
-  }).catch(function(e) { wrap.innerHTML = empty('⚠️','Erreur enseignants ('+e.message+')'); });
-}
 
-window.createEnseignantNotes = function() {
-  var body = {user_id: val('enUserId'), prenom: val('enPrenom'), nom: val('enNom'), calendar_departement_id: num('enDeptId')};
-  if (!body.user_id||!body.prenom||!body.nom||isNaN(body.calendar_departement_id)) { showToast('Tous les champs requis','error'); return; }
-  api('POST', '/api/admin/notes/admin/enseignants', body).then(function(r) {
-    if (r.ok || r.status===201) { showToast('Enseignant enregistré ✓','success'); closeModal('modalEnseignantNotes'); loadEnseignantsNotes(); }
-    else errToast(r);
-  });
-};
-window.deleteEnseignantNotes = function(id) {
-  if (!confirm('Supprimer ?')) return;
-  api('DELETE', '/api/admin/notes/admin/enseignants/'+id).then(function(r) {
-    if (r.ok || r.status===204) { showToast('Supprimé ✓','success'); loadEnseignantsNotes(); }
-    else errToast(r);
-  });
-};
 
 /* Notes — Saisie */
 window.upsertNote = function() {
@@ -3264,6 +3191,7 @@ if (initAuth()) {
   <div class="modal">
     <h3>Modifier l'élément de module</h3>
     <input type="hidden" id="editElementId"/>
+    <input type="hidden" id="editElementModuleId"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nom</label><input type="text" id="editElementNom"/></div>
       <div class="form-group"><label>Code</label><input type="text" id="editElementCode"/></div>
@@ -3352,22 +3280,6 @@ if (initAuth()) {
   </div>
 </div>
 
-<!-- Edit Enseignant ms-notes -->
-<div class="modal-overlay" id="modalEditEnseignantNotes">
-  <div class="modal">
-    <h3>Modifier l'enseignant (ms-notes)</h3>
-    <input type="hidden" id="editEnseignantNotesId"/>
-    <div class="form-grid">
-      <div class="form-group"><label>Prénom</label><input type="text" id="editEnseignantNotesPrenom"/></div>
-      <div class="form-group"><label>Nom</label><input type="text" id="editEnseignantNotesNom"/></div>
-      <div class="form-group full"><label>ID Département</label><input type="number" id="editEnseignantNotesDeptId"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-outline" onclick="closeModal('modalEditEnseignantNotes')">Annuler</button>
-      <button class="btn btn-gold"    onclick="updateEnseignantNotes()">Enregistrer</button>
-    </div>
-  </div>
-</div>
 
 
 <script>
@@ -3522,17 +3434,19 @@ window.updateModule = function() {
 };
 
 /* ── Éléments ── */
-window.editElement = function(id, nom, code, coeff, type) {
-  ge('editElementId').value    = id;
-  ge('editElementNom').value   = nom;
-  ge('editElementCode').value  = code;
-  ge('editElementCoeff').value = coeff;
-  ge('editElementType').value  = type;
+window.editElement = function(id, nom, code, coeff, type, moduleId) {
+  ge('editElementId').value       = id;
+  ge('editElementNom').value      = nom;
+  ge('editElementCode').value     = code;
+  ge('editElementCoeff').value    = coeff;
+  ge('editElementType').value     = type;
+  ge('editElementModuleId').value = moduleId;
   openModal('modalEditElement');
 };
 window.updateElement = function() {
   var id = ge('editElementId').value;
-  var body = {nom: val('editElementNom'), code: val('editElementCode'), coefficient: parseFloat(ge('editElementCoeff').value), type: val('editElementType')};
+  var moduleId = parseInt(ge('editElementModuleId').value, 10);
+  var body = {nom: val('editElementNom'), code: val('editElementCode'), coefficient: parseFloat(ge('editElementCoeff').value), type: val('editElementType'), module_id: moduleId};
   if (!body.nom || !body.code || isNaN(body.coefficient)) { showToast('Nom, code et coefficient requis','error'); return; }
   api('PUT', '/api/admin/calendar/elements/'+id, body).then(function(r) {
     if (r.ok) { showToast('Élément modifié ✓','success'); closeModal('modalEditElement'); window.loadModules(); }
@@ -3606,23 +3520,6 @@ window.updateEtudiant = function() {
   });
 };
 
-/* ── Enseignants ms-notes ── */
-window.editEnseignantNotes = function(id, prenom, nom, deptId) {
-  ge('editEnseignantNotesId').value      = id;
-  ge('editEnseignantNotesPrenom').value  = prenom;
-  ge('editEnseignantNotesNom').value     = nom;
-  ge('editEnseignantNotesDeptId').value  = deptId;
-  openModal('modalEditEnseignantNotes');
-};
-window.updateEnseignantNotes = function() {
-  var id = ge('editEnseignantNotesId').value;
-  var body = {prenom: val('editEnseignantNotesPrenom'), nom: val('editEnseignantNotesNom'), calendar_departement_id: num('editEnseignantNotesDeptId')};
-  if (!body.prenom || !body.nom || isNaN(body.calendar_departement_id)) { showToast('Tous les champs requis','error'); return; }
-  api('PUT', '/api/admin/notes/admin/enseignants/'+id, body).then(function(r) {
-    if (r.ok) { showToast('Enseignant modifié ✓','success'); closeModal('modalEditEnseignantNotes'); loadEnseignantsNotes(); }
-    else errToast(r);
-  });
-};
 </script>
 </body>
 </html>

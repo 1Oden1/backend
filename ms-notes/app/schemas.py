@@ -44,27 +44,6 @@ class EtudiantRead(BaseModel):
         from_attributes = True
 
 
-# ── Enseignants ───────────────────────────────────────────────────────────────
-
-class EnseignantIn(BaseModel):
-    user_id:                 str
-    prenom:                  str
-    nom:                     str
-    calendar_departement_id: int
-
-
-class EnseignantRead(BaseModel):
-    id:                      int
-    user_id:                 str
-    prenom:                  str
-    nom:                     str
-    calendar_departement_id: int
-    created_at:              datetime
-
-    class Config:
-        from_attributes = True
-
-
 # ── Notes (saisie admin) ──────────────────────────────────────────────────────
 
 class NoteIn(BaseModel):

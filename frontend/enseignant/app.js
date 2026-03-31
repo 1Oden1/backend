@@ -730,10 +730,28 @@ window.ensChatSearchUsers = function(q) {
         roles: ['enseignant']
       }));
 
-      // Les enseignants peuvent uniquement contacter d'autres enseignants
-      // (via ms-calendar, accessible sans droits admin)
-      // Note: pour contacter des admins/délégués, l'admin doit initier la conversation
-      const targets = ensFiltered;
+      // Récupérer aussi les délégués (les enseignants peuvent contacter les délégués)
+      let delegueFiltered = [];
+      try {
+        const rDel = await api('GET', '/api/admin/users/delegues');
+        const allDel = rDel.ok ? (await rDel.json()) : [];
+        delegueFiltered = allDel.filter(u =>
+          u.id && u.id !== myId && (
+            (u.last_name  || '').toLowerCase().includes(q2) ||
+            (u.first_name || '').toLowerCase().includes(q2) ||
+            (u.username   || '').toLowerCase().includes(q2)
+          )
+        ).map(u => ({
+          id: u.id,
+          first_name: u.first_name || '',
+          last_name:  u.last_name  || '',
+          email:      u.email      || '',
+          username:   u.username   || '',
+          roles: ['delegue'],
+        }));
+      } catch(e) { /* ms-admin indisponible — on ignore */ }
+
+      const targets = [...ensFiltered, ...delegueFiltered];
       if (!targets.length) {
         list.innerHTML = '<div style="padding:.8rem;text-align:center;color:var(--muted);font-size:.82rem">Aucun résultat.</div>';
         return;

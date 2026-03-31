@@ -31,25 +31,35 @@ router = APIRouter(prefix="/api/v1/notes/etudiant", tags=["Étudiant"])
 # ── Enseignants de ma filière (pour le chat) ──────────────────────────────────
 
 @router.get("/enseignants-filiere",
-            summary="Enseignants du département de ma filière (pour le chat)")
+            summary="Enseignants de MA filière (pour le chat délégué)")
 def enseignants_ma_filiere(
     db: Session = Depends(get_db),
     user: dict = Depends(require_student),
 ):
+    """
+    Retourne les enseignants ayant au moins une séance dans la filière du délégué.
+    Source : ms-calendar/internal — même source que check_chat_permission dans ms-messaging.
+    Garantit que la liste affichée = la liste autorisée par le backend.
+    """
     etudiant = get_etudiant_by_user_id(db, user["sub"])
     if not etudiant:
         raise HTTPException(404, "Profil étudiant introuvable.")
+    if not etudiant.calendar_filiere_id:
+        raise HTTPException(404, "Filière non configurée pour cet étudiant.")
     try:
-        filiere = _cal_get(f"filieres/{etudiant.calendar_filiere_id}")
-        dept_id = filiere["departement_id"]
+        data = _cal_get(f"filieres/{etudiant.calendar_filiere_id}/enseignants")
+        enseignants = data.get("enseignants", [])
     except Exception:
-        raise HTTPException(502, "Impossible de récupérer la filière depuis ms-calendar.")
-    rows = db.query(Enseignant).filter(
-        Enseignant.calendar_departement_id == dept_id
-    ).order_by(Enseignant.nom).all()
+        raise HTTPException(502, "Impossible de récupérer les enseignants depuis ms-calendar.")
     return [
-        {"user_id": e.user_id, "prenom": e.prenom, "nom": e.nom, "peut_chatter": True}
-        for e in rows
+        {
+            "user_id": e["user_id"],
+            "prenom":  e.get("prenom", ""),
+            "nom":     e.get("nom", ""),
+            "peut_chatter": bool(e.get("user_id")),
+        }
+        for e in enseignants
+        if e.get("user_id")  # uniquement les enseignants avec un compte Keycloak lié
     ]
 
 

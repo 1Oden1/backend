@@ -70,11 +70,11 @@ def check_chat_permission(
             return True, "ok"
         return False, "L'admin ne peut discuter qu'avec les enseignants ou délégués."
 
-    # ── Enseignant → Admin ou Délégué ─────────────────────────────────────────
+    # ── Enseignant → Admin, Délégué ou autre Enseignant ──────────────────────
     if sender_is_enseignant:
-        if target_is_admin or target_is_delegue:
+        if target_is_admin or target_is_delegue or target_is_enseignant:
             return True, "ok"
-        return False, "L'enseignant ne peut discuter qu'avec l'admin ou un délégué."
+        return False, "L'enseignant ne peut discuter qu'avec l'admin, un délégué ou un autre enseignant."
 
     # ── Délégué → Enseignants de SA filière uniquement ────────────────────────
     if sender_is_delegue:

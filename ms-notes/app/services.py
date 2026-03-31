@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import DemandeClassement, Enseignant, Etudiant, Note
+from app.models import DemandeClassement, Etudiant, Note
 from app.schemas import (
     ClassementCompletOut, EntreeClassement,
     ElementNoteOut, MonClassementOut, SemestreNotesOut,
@@ -56,8 +56,6 @@ def get_etudiant_by_user_id(db: Session, user_id: str) -> Optional[Etudiant]:
     return db.query(Etudiant).filter(Etudiant.user_id == user_id).first()
 
 
-def get_enseignant_by_user_id(db: Session, user_id: str) -> Optional[Enseignant]:
-    return db.query(Enseignant).filter(Enseignant.user_id == user_id).first()
 
 
 # ── Notes d'un étudiant pour un semestre ─────────────────────────────────────

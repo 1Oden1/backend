@@ -17,13 +17,11 @@ from app.config import settings
 from app.database import get_db
 from app.events import (
     publish_student_created, publish_student_deleted,
-    publish_teacher_created, publish_teacher_deleted,
 )
-from app.models import DemandeClassement, DemandeReleve, Enseignant, Etudiant, Note
+from app.models import DemandeClassement, DemandeReleve, Etudiant, Note
 from app.schemas import (
     AckResponse,
     DemandeClassementRead, DemandeReleveRead,
-    EnseignantIn, EnseignantRead,
     EtudiantIn, EtudiantRead,
     NoteIn, NoteRead,
     TraiterDemandeIn,
@@ -192,83 +190,6 @@ async def update_etudiant(
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Enseignants
-# ════════════════════════════════════════════════════════════════════════════
-
-@router.post("/enseignants", response_model=EnseignantRead, status_code=201)
-async def create_enseignant(
-    body: EnseignantIn,
-    db: Session = Depends(get_db),
-    _=Depends(require_admin),
-):
-    if db.query(Enseignant).filter(Enseignant.user_id == body.user_id).first():
-        raise HTTPException(409, "Enseignant déjà enregistré.")
-    obj = Enseignant(
-        user_id=body.user_id,
-        prenom=body.prenom,
-        nom=body.nom,
-        calendar_departement_id=body.calendar_departement_id,
-    )
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    await publish_teacher_created(obj.user_id)
-    return obj
-
-
-@router.get("/enseignants", response_model=List[EnseignantRead])
-def list_enseignants(
-    db: Session = Depends(get_db),
-    _=Depends(require_admin),
-):
-    return db.query(Enseignant).order_by(Enseignant.nom).all()
-
-
-@router.get("/enseignants/{enseignant_id}", response_model=EnseignantRead)
-def get_enseignant(
-    enseignant_id: int,
-    db: Session = Depends(get_db),
-    _=Depends(require_admin),
-):
-    obj = db.get(Enseignant, enseignant_id)
-    if not obj:
-        raise HTTPException(404, "Enseignant introuvable.")
-    return obj
-
-
-@router.delete("/enseignants/{enseignant_id}", status_code=204)
-async def delete_enseignant(
-    enseignant_id: int,
-    db: Session = Depends(get_db),
-    _=Depends(require_admin),
-):
-    obj = db.get(Enseignant, enseignant_id)
-    if not obj:
-        raise HTTPException(404, "Enseignant introuvable.")
-    user_id = obj.user_id
-    db.delete(obj)
-    db.commit()
-    await publish_teacher_deleted(user_id)
-
-
-@router.put("/enseignants/{enseignant_id}", response_model=EnseignantRead)
-async def update_enseignant(
-    enseignant_id: int,
-    body: EnseignantIn,
-    db: Session = Depends(get_db),
-    _=Depends(require_admin),
-):
-    obj = db.get(Enseignant, enseignant_id)
-    if not obj:
-        raise HTTPException(404, "Enseignant introuvable.")
-    obj.prenom                  = body.prenom
-    obj.nom                     = body.nom
-    obj.calendar_departement_id = body.calendar_departement_id
-    db.commit()
-    db.refresh(obj)
-    return obj
-
-
 # ════════════════════════════════════════════════════════════════════════════
 # Notes
 # ════════════════════════════════════════════════════════════════════════════

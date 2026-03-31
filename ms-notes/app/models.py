@@ -1,12 +1,11 @@
 """
 Modèles SQLAlchemy — base ent_notes
 
-ms-notes possède : Etudiant, Enseignant, Note, DemandeReleve, DemandeClassement
+ms-notes possède : Etudiant, Note, DemandeReleve, DemandeClassement
 ms-notes consomme : structure académique depuis ms-calendar via HTTP /internal
 
 Les colonnes calendar_* sont de simples entiers (pas de FK locale inter-base) :
   Etudiant.calendar_filiere_id          → ent_calendar.filieres.id
-  Enseignant.calendar_departement_id    → ent_calendar.departements.id
   Note.calendar_element_id              → ent_calendar.elements_module.id
   DemandeReleve.calendar_semestre_id    → ent_calendar.semestres.id
   DemandeClassement.calendar_semestre_id
@@ -45,21 +44,6 @@ class Etudiant(Base):
 
     __table_args__ = (
         Index("idx_etudiant_filiere", "calendar_filiere_id"),
-    )
-
-
-class Enseignant(Base):
-    __tablename__ = "enseignants"
-
-    id                      = Column(Integer,     primary_key=True, autoincrement=True)
-    user_id                 = Column(String(100), nullable=False, unique=True)
-    prenom                  = Column(String(100), nullable=False)
-    nom                     = Column(String(100), nullable=False)
-    calendar_departement_id = Column(Integer,     nullable=False)             # ref ms-calendar
-    created_at              = Column(DateTime,    default=datetime.utcnow)
-
-    __table_args__ = (
-        Index("idx_enseignant_dept", "calendar_departement_id"),
     )
 
 

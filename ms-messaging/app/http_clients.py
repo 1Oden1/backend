@@ -48,7 +48,8 @@ def get_students_of_filiere(filiere_id: int) -> list[str]:
 
 
 def get_all_teachers_user_ids() -> list[str]:
-    """Retourne les user_ids de tous les enseignants via ms-calendar (source unique)."""    try:
+    """Retourne les user_ids de tous les enseignants via ms-calendar (source unique)."""
+    try:
         resp = httpx.get(
             f"{MS_CALENDAR_URL}/api/v1/calendar/internal/enseignants",
             timeout=5.0,

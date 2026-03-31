@@ -139,7 +139,7 @@ async def start_consumer() -> None:
 
         async with queue.iterator() as q_iter:
             async for message in q_iter:
-                async with message.process(requeue_on_error=True):
+                async with message.process(ignore_processed=True):
                     try:
                         payload  = json.loads(message.body.decode())
                         rk       = message.routing_key or ""
@@ -148,11 +148,13 @@ async def start_consumer() -> None:
                             await handler(payload)
                         else:
                             logger.warning("Routing key non gérée : %s", rk)
+                        await message.ack()
                     except Exception as exc:
                         logger.error(
                             "Erreur traitement message [%s] : %s",
                             message.routing_key, exc,
                         )
+                        await message.nack(requeue=True)
 
     except Exception as exc:
         logger.error("Erreur consumer RabbitMQ : %s", exc)

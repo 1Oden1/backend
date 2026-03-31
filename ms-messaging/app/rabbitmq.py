@@ -91,6 +91,10 @@ async def start_consumer() -> None:
     async def _handle_teacher_deleted(payload: dict):
         cache_teacher_deleted(payload["user_id"])
 
+    async def _handle_teacher_created(payload: dict):
+        # user.teacher.created n'a pas de filiere_id — simple accusé de réception
+        logger.info("Enseignant créé : %s", payload.get("user_id"))
+
     async def _handle_filiere_upsert(payload: dict):
         cache_filiere_upsert(payload["filiere_id"], payload["nom"])
 
@@ -106,7 +110,7 @@ async def start_consumer() -> None:
         # ── Cache utilisateurs ─────────────────────────────────────────────
         "user.student.created":    _handle_student_created,
         "user.student.deleted":    _handle_student_deleted,
-        "user.teacher.created":    lambda p: None,   # enregistrement simple, pas de filière
+        "user.teacher.created":    _handle_teacher_created,  # accusé de réception async
         "user.teacher.deleted":    _handle_teacher_deleted,
         "teacher.filiere.linked":  _handle_teacher_linked,
         # ── Cache filières ─────────────────────────────────────────────────

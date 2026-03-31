@@ -945,14 +945,14 @@ window.chatSearchUsers = function(q) {
   list.innerHTML = '<div class="loader" style="margin:.6rem auto"></div>';
   _chatSearchTimer = setTimeout(async () => {
     try {
-      // Chercher uniquement les enseignants via ms-admin
-      // Route sécurisée : uniquement les enseignants de MA filière
-      // Accès réservé aux étudiants/délégués authentifiés — pas d'UUID Keycloak exposé
+      // Chercher les enseignants depuis ms-notes (filière du délégué)
+      // Cet endpoint appelle ms-calendar/internal/filieres/{id}/enseignants
       const r = await api('GET', '/api/notes/etudiant/enseignants-filiere');
-      const enseignants = r.ok ? (await r.json()) : [];
-      // Filtrer par nom/prénom selon la recherche
+      const rawEns = r.ok ? (await r.json()) : [];
       const q2 = q.toLowerCase();
-      const filtered = (enseignants || []).filter(e =>
+      const myId = (currentUser && currentUser.id) || '';
+      const enseignants = rawEns.filter(e => e.user_id && e.user_id !== myId);
+      const filtered = enseignants.filter(e =>
         (e.nom || '').toLowerCase().includes(q2) ||
         (e.prenom || '').toLowerCase().includes(q2)
       );

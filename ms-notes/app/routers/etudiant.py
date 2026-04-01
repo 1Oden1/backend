@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_student
 from app.database import get_db
-from app.models import DemandeClassement, DemandeReleve, Enseignant, Etudiant
+from app.models import DemandeClassement, DemandeReleve, Etudiant
 from app.schemas import (
     DemandeClassementIn, DemandeClassementOut,
     DemandeReleveIn, DemandeReleveOut,

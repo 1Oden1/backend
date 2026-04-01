@@ -69,6 +69,18 @@ def create_annee(body: AnneeUniversitaireIn, db: Session = Depends(get_db), _=De
     return obj
 
 
+@router.put("/annees/{annee_id}", response_model=AnneeUniversitaireRead)
+def update_annee(annee_id: int, body: AnneeUniversitaireIn, db: Session = Depends(get_db), _=Depends(require_admin)):
+    obj = db.get(AnneeUniversitaire, annee_id)
+    if not obj: raise HTTPException(404, "Année introuvable")
+    obj.label = body.label
+    try:
+        db.commit(); db.refresh(obj)
+    except IntegrityError as exc:
+        db.rollback(); raise _handle_integrity(exc)
+    return obj
+
+
 @router.delete("/annees/{annee_id}", status_code=204)
 def delete_annee(annee_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     obj = db.get(AnneeUniversitaire, annee_id)

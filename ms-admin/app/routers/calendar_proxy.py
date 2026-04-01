@@ -139,6 +139,10 @@ async def proxy_emploi_du_temps(semestre_id: int, request: Request, _=Depends(ge
 async def proxy_create_annee(request: Request, _=Depends(require_admin)):
     return await _proxy("POST", "/annees", _token(request), await request.json())
 
+@router.put("/annees/{annee_id}",                    summary="[Proxy] Modifier une année universitaire")
+async def proxy_update_annee(annee_id: int, request: Request, _=Depends(require_admin)):
+    return await _proxy("PUT", f"/annees/{annee_id}", _token(request), await request.json())
+
 @router.delete("/annees/{annee_id}",     status_code=204, summary="[Proxy] Supprimer une année universitaire")
 async def proxy_delete_annee(annee_id: int, request: Request, _=Depends(require_admin)):
     return await _proxy("DELETE", f"/annees/{annee_id}", _token(request))

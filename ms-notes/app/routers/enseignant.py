@@ -23,7 +23,26 @@ from app.services import (
 router = APIRouter(prefix="/api/v1/notes/enseignant", tags=["Enseignant"])
 
 
-# ── Classements ───────────────────────────────────────────────────────────────
+# ── Étudiants d'une filière ───────────────────────────────────────────────────
+
+@router.get("/etudiants-filiere/{filiere_id}",
+            summary="Liste des étudiants d'une filière (pour relevé)")
+def etudiants_par_filiere(
+    filiere_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_teacher),
+):
+    """
+    Retourne la liste [{id, cne, prenom, nom}] des étudiants appartenant
+    à la filière indiquée. Utilisé par le workflow relevé enseignant.
+    """
+    etudiants = db.query(Etudiant).filter(
+        Etudiant.calendar_filiere_id == filiere_id
+    ).order_by(Etudiant.nom, Etudiant.prenom).all()
+    return [
+        {"id": e.id, "cne": e.cne or "", "prenom": e.prenom or "", "nom": e.nom or ""}
+        for e in etudiants
+    ]
 
 @router.get("/classements/filiere/{filiere_id}/semestre/{semestre_id}",
             response_model=ClassementCompletOut,

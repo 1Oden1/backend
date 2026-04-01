@@ -166,30 +166,48 @@ def classement_filiere(
     db: Session, filiere_id: int, semestre_id: int
 ) -> ClassementCompletOut:
     filiere = _get_filiere(filiere_id)
-    etudiants_map = {
-        e.id: e
-        for e in db.query(Etudiant).filter(Etudiant.calendar_filiere_id == filiere_id).all()
-    }
+    etudiants_all = db.query(Etudiant).filter(
+        Etudiant.calendar_filiere_id == filiere_id
+    ).all()
+    etudiants_map = {e.id: e for e in etudiants_all}
+
+    # Étudiants avec notes, triés par moyenne décroissante
     moyennes = sorted(
         _moyennes_semestre_filiere(db, semestre_id, filiere_id),
         key=lambda x: x[1], reverse=True,
     )
+    ids_avec_notes = {eid for eid, _ in moyennes}
+
+    # Construire le classement : avec notes en premier, sans notes à la fin
+    entrees = [
+        EntreeClassement(
+            rang=rang,
+            cne=etudiants_map[eid].cne,
+            nom=f"{etudiants_map[eid].prenom} {etudiants_map[eid].nom}",
+            moyenne=moy,
+        )
+        for rang, (eid, moy) in enumerate(moyennes, start=1)
+        if eid in etudiants_map
+    ]
+    # Ajouter les étudiants sans aucune note (rang après les autres, moyenne = 0)
+    rang_sans_notes = len(entrees) + 1
+    for etudiant in etudiants_all:
+        if etudiant.id not in ids_avec_notes:
+            entrees.append(EntreeClassement(
+                rang=rang_sans_notes,
+                cne=etudiant.cne or "",
+                nom=f"{etudiant.prenom} {etudiant.nom}",
+                moyenne=Decimal("0"),
+            ))
+            rang_sans_notes += 1
+
     return ClassementCompletOut(
         scope_id=filiere_id,
         scope_nom=filiere["nom"],
         type_classement="filiere",
         calendar_semestre_id=semestre_id,
-        total=len(moyennes),
-        classement=[
-            EntreeClassement(
-                rang=rang,
-                cne=etudiants_map[eid].cne,
-                nom=f"{etudiants_map[eid].prenom} {etudiants_map[eid].nom}",
-                moyenne=moy,
-            )
-            for rang, (eid, moy) in enumerate(moyennes, start=1)
-            if eid in etudiants_map
-        ],
+        total=len(entrees),
+        classement=entrees,
     )
 
 

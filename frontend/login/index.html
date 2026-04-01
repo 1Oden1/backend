@@ -10,181 +10,221 @@
 </head>
 <body>
 
-<!-- ── FOND SVG OBLIQUE ── -->
-<div class="bg-layer">
-  <svg class="bg-svg" viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1a4a7a"/>
-        <stop offset="100%" stop-color="#2e6fad"/>
-      </linearGradient>
-      <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#f0f4f8"/>
-        <stop offset="100%" stop-color="#dde4ec"/>
-      </linearGradient>
-      <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#e8edf2"/>
-        <stop offset="100%" stop-color="#d0d8e0"/>
-      </linearGradient>
-      <filter id="shadow">
-        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000030"/>
-      </filter>
-    </defs>
+<div class="page">
 
-    <!-- Ciel -->
-    <rect width="1200" height="420" fill="url(#sky)"/>
+  <!-- ── IMAGE GAUCHE (coupe diagonale) ── -->
+  <div class="bg-image">
+    <svg class="bg-svg" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0d2d50"/>
+          <stop offset="100%" stop-color="#1a5080"/>
+        </linearGradient>
+        <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#e8eef5"/>
+          <stop offset="100%" stop-color="#cdd8e4"/>
+        </linearGradient>
+        <linearGradient id="floor2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8d4de"/>
+          <stop offset="100%" stop-color="#b0bfce"/>
+        </linearGradient>
+        <filter id="sh">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#00000040"/>
+        </filter>
+      </defs>
 
-    <!-- Nuages -->
-    <ellipse cx="150" cy="60" rx="90" ry="22" fill="white" opacity=".07"/>
-    <ellipse cx="220" cy="55" rx="60" ry="16" fill="white" opacity=".07"/>
-    <ellipse cx="900" cy="80" rx="110" ry="25" fill="white" opacity=".06"/>
-    <ellipse cx="980" cy="72" rx="70" ry="18" fill="white" opacity=".06"/>
+      <!-- Ciel -->
+      <rect width="1200" height="800" fill="url(#sky)"/>
 
-    <!-- Bâtiment -->
-    <rect x="200" y="90" width="800" height="330" fill="url(#wall)" rx="4" filter="url(#shadow)"/>
+      <!-- Étoiles / points lumineux -->
+      <circle cx="100" cy="80"  r="1.2" fill="white" opacity=".5"/>
+      <circle cx="250" cy="40"  r="1"   fill="white" opacity=".4"/>
+      <circle cx="400" cy="100" r="1.5" fill="white" opacity=".35"/>
+      <circle cx="850" cy="60"  r="1"   fill="white" opacity=".5"/>
+      <circle cx="1050" cy="90" r="1.2" fill="white" opacity=".4"/>
+      <circle cx="700"  cy="30" r="1"   fill="white" opacity=".45"/>
 
-    <!-- Bandeau toit -->
-    <rect x="180" y="78" width="840" height="30" fill="#1a3a5c" rx="4"/>
-    <text x="600" y="99" font-family="serif" font-size="13" fill="#7ec8ff" text-anchor="middle" letter-spacing="2">ÉCOLE SUPÉRIEURE DE TECHNOLOGIE — SALÉ</text>
+      <!-- Bâtiment principal -->
+      <rect x="80" y="160" width="1040" height="560" fill="url(#wall)" rx="4" filter="url(#sh)"/>
 
-    <!-- Fenêtres haut -->
-    <rect x="245" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <rect x="365" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <rect x="485" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <rect x="635" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <rect x="755" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <rect x="875" y="118" width="80" height="55" rx="3" fill="#2e6fad" opacity=".35"/>
-    <!-- Reflets -->
-    <rect x="248" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
-    <rect x="368" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
-    <rect x="488" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
-    <rect x="638" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
-    <rect x="758" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
-    <rect x="878" y="121" width="20" height="49" rx="2" fill="white" opacity=".09"/>
+      <!-- Bandeau supérieur -->
+      <rect x="60" y="145" width="1080" height="36" fill="#122840" rx="4"/>
+      <text x="600" y="170" font-family="Georgia,serif" font-size="16" fill="#5ab0f0"
+            text-anchor="middle" letter-spacing="3">ÉCOLE SUPÉRIEURE DE TECHNOLOGIE · SALÉ</text>
 
-    <!-- Séparateur -->
-    <rect x="200" y="187" width="800" height="4" fill="#c8d4e0"/>
+      <!-- Ligne déco sous bandeau -->
+      <rect x="80" y="181" width="1040" height="3" fill="#1e5a8a" opacity=".6"/>
 
-    <!-- Fenêtres bas gauche -->
-    <rect x="245" y="210" width="80" height="55" rx="3" fill="#2e6fad" opacity=".28"/>
-    <rect x="365" y="210" width="80" height="55" rx="3" fill="#2e6fad" opacity=".28"/>
-    <rect x="248" y="213" width="20" height="49" rx="2" fill="white" opacity=".08"/>
-    <rect x="368" y="213" width="20" height="49" rx="2" fill="white" opacity=".08"/>
+      <!-- Fenêtres rangée 1 -->
+      <rect x="115" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <rect x="255" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <rect x="395" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <rect x="705" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <rect x="845" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <rect x="985" y="205" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".4"/>
+      <!-- Reflets fenêtres r1 -->
+      <rect x="118" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
+      <rect x="258" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
+      <rect x="398" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
+      <rect x="708" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
+      <rect x="848" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
+      <rect x="988" y="208" width="28" height="64" rx="2" fill="white" opacity=".1"/>
 
-    <!-- Fenêtres bas droite -->
-    <rect x="755" y="210" width="80" height="55" rx="3" fill="#2e6fad" opacity=".28"/>
-    <rect x="875" y="210" width="80" height="55" rx="3" fill="#2e6fad" opacity=".28"/>
-    <rect x="758" y="213" width="20" height="49" rx="2" fill="white" opacity=".08"/>
-    <rect x="878" y="213" width="20" height="49" rx="2" fill="white" opacity=".08"/>
+      <!-- Séparateur étages -->
+      <rect x="80" y="290" width="1040" height="5" fill="#b8c8d8"/>
 
-    <!-- Entrée principale -->
-    <rect x="530" y="280" width="140" height="140" rx="4" fill="#1a3a5c" opacity=".18"/>
-    <rect x="545" y="280" width="50" height="140" fill="#2e6fad" opacity=".22"/>
-    <rect x="605" y="280" width="50" height="140" fill="#2e6fad" opacity=".18"/>
-    <rect x="595" y="295" width="12" height="12" rx="6" fill="#f0c040" opacity=".8"/>
-    <rect x="524" y="270" width="12" height="150" rx="3" fill="#c8d4e0"/>
-    <rect x="664" y="270" width="12" height="150" rx="3" fill="#c8d4e0"/>
-    <rect x="512" y="268" width="176" height="14" rx="3" fill="#b8c8d8"/>
+      <!-- Fenêtres rangée 2 -->
+      <rect x="115" y="315" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".35"/>
+      <rect x="255" y="315" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".35"/>
+      <rect x="985" y="315" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".35"/>
+      <rect x="845" y="315" width="100" height="70" rx="4" fill="#1e5a8a" opacity=".35"/>
+      <rect x="118" y="318" width="28" height="64" rx="2" fill="white" opacity=".09"/>
+      <rect x="258" y="318" width="28" height="64" rx="2" fill="white" opacity=".09"/>
+      <rect x="848" y="318" width="28" height="64" rx="2" fill="white" opacity=".09"/>
+      <rect x="988" y="318" width="28" height="64" rx="2" fill="white" opacity=".09"/>
 
-    <!-- Sol -->
-    <rect x="0" y="388" width="1200" height="32" fill="url(#floor)"/>
-    <rect x="505" y="368" width="190" height="52" fill="#c8cdd4" opacity=".6"/>
-    <rect x="505" y="368" width="4" height="52" fill="#a8b4c0"/>
-    <rect x="691" y="368" width="4" height="52" fill="#a8b4c0"/>
+      <!-- Séparateur -->
+      <rect x="80" y="400" width="1040" height="5" fill="#b8c8d8"/>
 
-    <!-- Lampadaires -->
-    <rect x="475" y="295" width="5" height="95" rx="2" fill="#8898a8"/>
-    <ellipse cx="477" cy="292" rx="14" ry="5" fill="#8898a8"/>
-    <ellipse cx="477" cy="290" rx="6" ry="6" fill="#f5d060" opacity=".7"/>
-    <rect x="720" y="295" width="5" height="95" rx="2" fill="#8898a8"/>
-    <ellipse cx="722" cy="292" rx="14" ry="5" fill="#8898a8"/>
-    <ellipse cx="722" cy="290" rx="6" ry="6" fill="#f5d060" opacity=".7"/>
+      <!-- Entrée centrale -->
+      <rect x="490" y="420" width="220" height="300" rx="4" fill="#0d2d50" opacity=".2"/>
+      <!-- Porte gauche -->
+      <rect x="500" y="430" width="95" height="290" rx="3" fill="#1e5a8a" opacity=".28"/>
+      <!-- Porte droite -->
+      <rect x="605" y="430" width="95" height="290" rx="3" fill="#1e5a8a" opacity=".22"/>
+      <!-- Poignée -->
+      <rect x="594" y="565" width="14" height="14" rx="7" fill="#f0c040" opacity=".9"/>
+      <!-- Colonnes -->
+      <rect x="483" y="408" width="14" height="310" rx="4" fill="#9aaec0"/>
+      <rect x="703" y="408" width="14" height="310" rx="4" fill="#9aaec0"/>
+      <!-- Fronton -->
+      <rect x="470" y="405" width="260" height="16" rx="4" fill="#88a0b8"/>
 
-    <!-- Personnages -->
-    <ellipse cx="320" cy="356" rx="9" ry="9" fill="#1a3a5c" opacity=".45"/>
-    <rect x="315" y="365" width="10" height="22" rx="3" fill="#1a3a5c" opacity=".45"/>
-    <rect x="312" y="367" width="6" height="14" rx="2" fill="#1a3a5c" opacity=".35"/>
-    <rect x="321" y="367" width="6" height="14" rx="2" fill="#1a3a5c" opacity=".35"/>
-    <ellipse cx="870" cy="358" rx="9" ry="9" fill="#1a3a5c" opacity=".45"/>
-    <rect x="865" y="367" width="10" height="22" rx="3" fill="#1a3a5c" opacity=".45"/>
-    <ellipse cx="480" cy="355" rx="8" ry="8" fill="#2e6fad" opacity=".45"/>
-    <rect x="476" y="363" width="9" height="20" rx="2" fill="#2e6fad" opacity=".45"/>
-    <rect x="484" y="365" width="8" height="12" rx="2" fill="#2e6fad" opacity=".3"/>
+      <!-- Fenêtres rangée 3 gauche -->
+      <rect x="115" y="425" width="100" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="255" y="425" width="100" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="395" y="425" width="80" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="118" y="428" width="28" height="59" rx="2" fill="white" opacity=".08"/>
+      <rect x="258" y="428" width="28" height="59" rx="2" fill="white" opacity=".08"/>
+      <!-- Fenêtres rangée 3 droite -->
+      <rect x="725" y="425" width="80" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="845" y="425" width="100" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="985" y="425" width="100" height="65" rx="4" fill="#1e5a8a" opacity=".3"/>
+      <rect x="848" y="428" width="28" height="59" rx="2" fill="white" opacity=".08"/>
+      <rect x="988" y="428" width="28" height="59" rx="2" fill="white" opacity=".08"/>
 
-    <!-- Panneau -->
-    <rect x="80" y="330" width="110" height="38" rx="4" fill="white" opacity=".88" filter="url(#shadow)"/>
-    <text x="135" y="347" font-family="sans-serif" font-size="7.5" fill="#1a3a5c" text-anchor="middle" font-weight="700">Université Mohammed V</text>
-    <text x="135" y="360" font-family="sans-serif" font-size="7" fill="#2e6fad" text-anchor="middle">Rabat</text>
-  </svg>
-</div>
+      <!-- Sol -->
+      <rect x="0" y="700" width="1200" height="100" fill="url(#floor2)"/>
+      <!-- Allée -->
+      <rect x="440" y="680" width="320" height="120" fill="#b0bece" opacity=".7"/>
+      <rect x="440" y="680" width="5"   height="120" fill="#8898a8"/>
+      <rect x="755" y="680" width="5"   height="120" fill="#8898a8"/>
 
-<!-- ── OVERLAY ── -->
-<div class="overlay"></div>
+      <!-- Lampadaires -->
+      <rect x="415" y="480" width="6" height="240" rx="3" fill="#6a7e90"/>
+      <path d="M421 480 Q460 460 480 475" stroke="#6a7e90" stroke-width="5" fill="none"/>
+      <ellipse cx="482" cy="476" rx="8" ry="8" fill="#fef08a" opacity=".85"/>
 
-<!-- ── FORMULAIRE CENTRÉ ── -->
-<div class="center">
-  <div class="card">
+      <rect x="779" y="480" width="6" height="240" rx="3" fill="#6a7e90"/>
+      <path d="M779 480 Q740 460 720 475" stroke="#6a7e90" stroke-width="5" fill="none"/>
+      <ellipse cx="718" cy="476" rx="8" ry="8" fill="#fef08a" opacity=".85"/>
 
-    <div class="card-header">
-      <div class="card-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-        </svg>
-      </div>
-      <div>
-        <h1>Connexion</h1>
-        <p>Espace Numérique de Travail · EST Salé</p>
-      </div>
-    </div>
+      <!-- Silhouettes étudiants -->
+      <!-- Groupe gauche -->
+      <ellipse cx="200" cy="668" rx="12" ry="12" fill="#0d2d50" opacity=".55"/>
+      <rect    cx="200" cy="680" x="194" y="680" width="12" height="28" rx="4" fill="#0d2d50" opacity=".55"/>
+      <rect x="190" y="684" width="7" height="18" rx="3" fill="#0d2d50" opacity=".4"/>
+      <rect x="203" y="684" width="7" height="18" rx="3" fill="#0d2d50" opacity=".4"/>
+      <!-- sac à dos -->
+      <rect x="205" y="682" width="10" height="16" rx="3" fill="#1e5a8a" opacity=".4"/>
 
-    <div class="field">
-      <label for="username">Identifiant</label>
-      <div class="input-wrap">
-        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-        </svg>
-        <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
-      </div>
-    </div>
+      <!-- Groupe droite -->
+      <ellipse cx="980" cy="670" rx="11" ry="11" fill="#0d2d50" opacity=".55"/>
+      <rect x="975" y="681" width="11" height="26" rx="3" fill="#0d2d50" opacity=".55"/>
+      <rect x="985" y="684" width="10" height="15" rx="3" fill="#1e5a8a" opacity=".35"/>
 
-    <div class="field">
-      <label for="password">Mot de passe</label>
-      <div class="input-wrap">
-        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-        </svg>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
-        <button class="eye-btn" id="eyeBtn" type="button">
-          <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
-      </div>
-      <a href="#" class="forgot-link">Mot de passe oublié ?</a>
-    </div>
-
-    <button class="btn-login" id="loginBtn" type="button">
-      <span id="btnLabel">Se connecter</span>
-    </button>
-
-    <div class="error-msg" id="errorBox" role="alert">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span id="errorText"></span>
-    </div>
-
-    <div class="card-footer">
-      Accès automatique selon votre rôle : <strong>étudiant</strong>, <strong>enseignant</strong> ou <strong>administrateur</strong>
-    </div>
-
+      <!-- Panneau devant -->
+      <rect x="60" y="630" width="130" height="48" rx="5" fill="white" opacity=".9" filter="url(#sh)"/>
+      <rect x="60" y="630" width="6"   height="48" rx="3" fill="#1a4a7a"/>
+      <text x="132" y="651" font-family="sans-serif" font-size="9" fill="#1a4a7a" text-anchor="middle" font-weight="700">Université Mohammed V</text>
+      <text x="132" y="666" font-family="sans-serif" font-size="8.5" fill="#2e6fad" text-anchor="middle">Rabat — EST Salé</text>
+    </svg>
   </div>
+
+  <!-- ── FOND GRIS DROITE ── -->
+  <div class="bg-right"></div>
+
+  <!-- ── LABEL SUR IMAGE ── -->
+  <div class="image-label">
+    <div class="ent-name">Espace Numérique<br/>de Travail</div>
+    <div class="ent-sub">Université Mohammed V · EST Salé</div>
+  </div>
+
+  <!-- ── FORMULAIRE ── -->
+  <div class="form-area">
+    <div class="card">
+
+      <div class="card-header">
+        <div class="card-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Connexion</h1>
+          <p>Identifiants universitaires Keycloak</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="username">Identifiant</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+          </svg>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="eye-btn" id="eyeBtn" type="button">
+            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+      </div>
+
+      <button class="btn-login" id="loginBtn" type="button">
+        <span id="btnLabel">Se connecter</span>
+      </button>
+
+      <div class="error-msg" id="errorBox" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorText"></span>
+      </div>
+
+      <div class="card-footer">
+        Accès automatique selon votre rôle : <strong>étudiant</strong>, <strong>enseignant</strong> ou <strong>administrateur</strong>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <script>
 'use strict';
-
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const loginBtn      = document.getElementById('loginBtn');
@@ -195,13 +235,12 @@ const errorBox      = document.getElementById('errorBox');
 const errorText     = document.getElementById('errorText');
 
 (function checkExistingSession() {
-  const token     = localStorage.getItem('access_token');
-  const user      = localStorage.getItem('user');
-  const ts        = parseInt(localStorage.getItem('token_ts') || '0');
-  const expiresIn = parseInt(localStorage.getItem('expires_in') || '0');
+  const token = localStorage.getItem('access_token');
+  const user  = localStorage.getItem('user');
+  const ts    = parseInt(localStorage.getItem('token_ts') || '0');
+  const exp   = parseInt(localStorage.getItem('expires_in') || '0');
   if (!token || !user) return;
-  const elapsed = (Date.now() - ts) / 1000;
-  if (expiresIn > 0 && elapsed > expiresIn) { localStorage.clear(); return; }
+  if (exp > 0 && (Date.now() - ts) / 1000 > exp) { localStorage.clear(); return; }
   try {
     const u = JSON.parse(user);
     const roles = u.roles || u.realm_roles || u.groups || [];
@@ -230,36 +269,26 @@ async function doLogin() {
   if (!username || !password) { showError('Veuillez remplir tous les champs.'); return; }
   setLoading(true); hideError();
   try {
-    const loginRes = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const lr = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    if (!loginRes.ok) {
-      const data = await loginRes.json().catch(() => ({}));
-      showError(data.detail || 'Identifiants incorrects. Veuillez réessayer.');
-      setLoading(false); return;
-    }
-    const tokens = await loginRes.json();
+    if (!lr.ok) { const d = await lr.json().catch(()=>({})); showError(d.detail||'Identifiants incorrects.'); setLoading(false); return; }
+    const tokens = await lr.json();
     saveTokens(tokens);
-    const meRes = await fetch('/api/auth/me', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    if (!meRes.ok) { showError('Erreur lors de la récupération du profil.'); setLoading(false); return; }
-    const user = await meRes.json();
+    const mr = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${tokens.access_token}` } });
+    if (!mr.ok) { showError('Erreur lors de la récupération du profil.'); setLoading(false); return; }
+    const user = await mr.json();
     localStorage.setItem('user', JSON.stringify(user));
     setSuccess();
     setTimeout(() => redirect(user.roles || []), 750);
-  } catch {
-    showError('Impossible de joindre le serveur. Vérifiez votre connexion.');
-    setLoading(false);
-  }
+  } catch { showError('Impossible de joindre le serveur.'); setLoading(false); }
 }
 
-function saveTokens(tokens) {
-  localStorage.setItem('access_token',  tokens.access_token);
-  localStorage.setItem('refresh_token', tokens.refresh_token);
-  localStorage.setItem('expires_in',    String(tokens.expires_in));
+function saveTokens(t) {
+  localStorage.setItem('access_token',  t.access_token);
+  localStorage.setItem('refresh_token', t.refresh_token);
+  localStorage.setItem('expires_in',    String(t.expires_in));
   localStorage.setItem('token_ts',      String(Date.now()));
 }
 function redirect(roles) {
@@ -269,8 +298,8 @@ function redirect(roles) {
 }
 function setLoading(on) {
   loginBtn.disabled = on;
-  if (on) { btnLabel.innerHTML = '<span class="spinner"></span>Connexion…'; }
-  else { btnLabel.textContent = 'Se connecter'; loginBtn.classList.remove('success'); loginBtn.style.cssText = ''; }
+  if (on) btnLabel.innerHTML = '<span class="spinner"></span>Connexion…';
+  else  { btnLabel.textContent = 'Se connecter'; loginBtn.classList.remove('success'); loginBtn.style.cssText = ''; }
 }
 function setSuccess() { loginBtn.classList.add('success'); btnLabel.textContent = 'Connexion réussie'; }
 function showError(msg) { errorText.textContent = msg; errorBox.classList.add('show'); }

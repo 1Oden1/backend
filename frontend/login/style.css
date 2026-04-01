@@ -1,18 +1,18 @@
 /* ═══════════════════════════════════════════════
-   ENT Salé — Login  ·  Fond oblique + formulaire centré
+   ENT Salé — Login  ·  Split diagonal
 ═══════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --blue:       #1a4a7a;
-  --blue-l:     #2e6fad;
-  --text:       #1a2433;
-  --muted:      #6b7a8d;
-  --border:     #dde2e8;
-  --light:      #eaecf0;
-  --error:      #dc2626;
-  --success:    #16a34a;
+  --blue:    #1a4a7a;
+  --blue-l:  #2e6fad;
+  --text:    #1a2433;
+  --muted:   #6b7a8d;
+  --border:  #dde2e8;
+  --light:   #eaecf0;
+  --error:   #dc2626;
+  --success: #16a34a;
 }
 
 html, body {
@@ -21,63 +21,100 @@ html, body {
   overflow: hidden;
 }
 
-/* ══ FOND SVG OBLIQUE FULL-SCREEN ════════════ */
-.bg-layer {
+/* ══ PAGE FULL ═══════════════════════════════ */
+.page {
   position: fixed;
   inset: 0;
-  z-index: 0;
-  /* Inclinaison légère */
-  transform: rotate(-6deg) scale(1.18);
-  transform-origin: center center;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.bg-svg {
+/* ══ IMAGE GAUCHE (clip diagonal) ═══════════ */
+.bg-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  /* coupe diagonale : triangle gauche */
+  clip-path: polygon(0 0, 68% 0, 52% 100%, 0 100%);
+}
+
+.bg-image .bg-svg {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-/* ══ OVERLAY FONCÉ ═══════════════════════════ */
-.overlay {
-  position: fixed;
+/* léger overlay sur l'image pour contraste */
+.bg-image::after {
+  content: '';
+  position: absolute;
   inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    135deg,
-    rgba(10, 22, 40, 0.72) 0%,
-    rgba(20, 45, 80, 0.60) 50%,
-    rgba(10, 22, 40, 0.72) 100%
-  );
-  backdrop-filter: blur(1px);
+  background: linear-gradient(160deg, rgba(10,22,40,.45) 0%, rgba(20,50,90,.35) 100%);
 }
 
-/* ══ CENTRE ══════════════════════════════════ */
-.center {
-  position: fixed;
+/* ══ FOND DROIT GRIS ══════════════════════════ */
+.bg-right {
+  position: absolute;
   inset: 0;
+  z-index: 0;
+  background: #f2f4f7;
+  /* triangle droit = inverse du clip gauche */
+  clip-path: polygon(52% 0, 100% 0, 100% 100%, 36% 100%);
+}
+
+/* ══ BADGE SUR L'IMAGE ═══════════════════════ */
+.image-label {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 3rem;
+  z-index: 5;
+  color: #fff;
+}
+.image-label .ent-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+.image-label .ent-sub {
+  font-size: .8rem;
+  font-weight: 400;
+  opacity: .8;
+  margin-top: .25rem;
+  letter-spacing: .06em;
+  text-shadow: 0 1px 6px rgba(0,0,0,.4);
+}
+
+/* ══ FORMULAIRE CENTRÉ À DROITE ══════════════ */
+.form-area {
+  position: relative;
   z-index: 10;
+  width: 52%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 2rem 3rem 2rem 5rem;
 }
 
 /* ══ CARD ════════════════════════════════════ */
 .card {
   width: 100%;
-  max-width: 400px;
-  background: rgba(255, 255, 255, 0.96);
+  max-width: 380px;
+  background: #ffffff;
   border-radius: 18px;
-  padding: 2.4rem 2.6rem 2.8rem;
+  padding: 2.4rem 2.5rem 2.8rem;
   box-shadow:
-    0 2px 8px rgba(0,0,0,.08),
-    0 20px 60px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.5);
-  animation: popIn .4s cubic-bezier(.34,1.28,.64,1) both;
+    0 2px 8px rgba(0,0,0,.06),
+    0 16px 48px rgba(0,0,0,.12),
+    0 0 0 1px var(--border);
+  animation: popIn .42s cubic-bezier(.34,1.28,.64,1) both;
 }
 
-/* ══ HEADER ══════════════════════════════════ */
+/* ══ CARD HEADER ═════════════════════════════ */
 .card-header {
   display: flex;
   align-items: center;
@@ -88,62 +125,46 @@ html, body {
 }
 
 .card-logo {
-  width: 48px; height: 48px;
+  width: 46px; height: 46px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--blue), var(--blue-l));
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(26,74,122,.3);
+  box-shadow: 0 4px 14px rgba(26,74,122,.28);
 }
 .card-logo svg { width: 22px; height: 22px; stroke: #fff; }
 
 .card-header h1 {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.2;
+  font-size: 1.3rem; font-weight: 700;
+  color: var(--text); line-height: 1.2;
 }
 .card-header p {
-  font-size: .75rem;
-  color: var(--muted);
-  margin-top: .15rem;
+  font-size: .75rem; color: var(--muted); margin-top: .15rem;
 }
 
 /* ══ FIELDS ══════════════════════════════════ */
 .field { margin-bottom: 1.2rem; }
 
 label {
-  display: block;
-  font-size: .7rem;
-  font-weight: 600;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: .42rem;
+  display: block; font-size: .7rem; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: .42rem;
 }
 
 .input-wrap { position: relative; }
 
 .input-icon {
-  position: absolute;
-  left: 12px; top: 50%;
+  position: absolute; left: 12px; top: 50%;
   transform: translateY(-50%);
-  width: 15px; height: 15px;
-  stroke: #a0aab8;
-  pointer-events: none;
+  width: 15px; height: 15px; stroke: #a0aab8; pointer-events: none;
 }
 
 input[type="text"],
 input[type="password"] {
-  width: 100%;
-  padding: .82rem 1rem .82rem 2.6rem;
-  background: #f5f7fa;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-family: 'Inter', sans-serif;
-  font-size: .87rem;
-  color: var(--text);
-  outline: none;
+  width: 100%; padding: .82rem 1rem .82rem 2.6rem;
+  background: #f5f7fa; border: 1.5px solid var(--border);
+  border-radius: 10px; font-family: 'Inter', sans-serif;
+  font-size: .87rem; color: var(--text); outline: none;
   transition: border-color .18s, box-shadow .18s, background .18s;
 }
 input:hover  { border-color: #b8c2cc; }
@@ -151,13 +172,9 @@ input:focus  { background: #fff; border-color: var(--blue-l); box-shadow: 0 0 0 
 input::placeholder { color: #b8c4ce; }
 
 .eye-btn {
-  position: absolute;
-  right: 10px; top: 50%;
-  transform: translateY(-50%);
-  background: none; border: none;
-  cursor: pointer; padding: 4px;
-  color: #a0aab8; line-height: 0;
-  border-radius: 6px;
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: #a0aab8; line-height: 0; border-radius: 6px;
   transition: color .15s, background .15s;
 }
 .eye-btn:hover { color: var(--blue-l); background: var(--light); }
@@ -166,7 +183,6 @@ input::placeholder { color: #b8c4ce; }
 .forgot-link {
   display: block; text-align: right; margin-top: .38rem;
   font-size: .73rem; color: var(--blue-l); text-decoration: none;
-  transition: color .15s;
 }
 .forgot-link:hover { color: var(--blue); text-decoration: underline; }
 
@@ -181,7 +197,7 @@ input::placeholder { color: #b8c4ce; }
   transition: opacity .2s, transform .15s, box-shadow .2s;
   box-shadow: 0 4px 16px rgba(26,74,122,.3);
 }
-.btn-login:hover   { opacity: .92; transform: translateY(-1px); box-shadow: 0 6px 22px rgba(26,74,122,.42); }
+.btn-login:hover   { opacity: .92; transform: translateY(-1px); box-shadow: 0 6px 22px rgba(26,74,122,.4); }
 .btn-login:active  { transform: translateY(0); opacity: 1; }
 .btn-login:disabled{ opacity: .55; cursor: not-allowed; transform: none; }
 .btn-login.success { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: none; }
@@ -214,12 +230,15 @@ input::placeholder { color: #b8c4ce; }
 
 /* ══ ANIMATIONS ══════════════════════════════ */
 @keyframes popIn {
-  from { opacity: 0; transform: scale(.94) translateY(16px); }
+  from { opacity: 0; transform: scale(.94) translateY(14px); }
   to   { opacity: 1; transform: scale(1)   translateY(0); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══ RESPONSIVE ══════════════════════════════ */
-@media (max-width: 480px) {
-  .card { padding: 1.8rem 1.5rem 2.2rem; border-radius: 14px; }
+@media (max-width: 768px) {
+  .bg-image, .bg-right, .image-label { display: none; }
+  .form-area { width: 100%; padding: 2rem 1.5rem; background: #f2f4f7; }
+  html, body { overflow: auto; }
+  .page { position: relative; min-height: 100vh; }
 }

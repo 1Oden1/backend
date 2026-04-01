@@ -1,229 +1,229 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ENT Salé — Espace Étudiant</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css?v=1773360858"/>
-  <style>
-    /* Styles critiques inline — indépendants du cache style.css */
-    .panel        { display: none !important; }
-    .panel.active { display: block !important; }
-    /* ── CHAT ÉTUDIANT ──────────────────────────────────────────────── */
-    .chat-layout { display:grid; grid-template-columns:260px 1fr; height:calc(100vh - 200px); min-height:420px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; }
-    .conv-list { border-right:1.5px solid var(--border); display:flex; flex-direction:column; background:var(--cream); }
-    .conv-list-head { display:flex; align-items:center; justify-content:space-between; padding:.7rem 1rem; font-weight:700; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; border-bottom:1.5px solid var(--border); background:#fff; flex-shrink:0; }
-    #convItems { flex:1; overflow-y:auto; }
-    .conv-item { display:flex; align-items:center; gap:.65rem; padding:.7rem 1rem; cursor:pointer; border-bottom:1px solid var(--border); transition:background .12s; }
-    .conv-item:hover { background:rgba(201,168,76,.08); }
-    .conv-avatar { width:36px; height:36px; border-radius:50%; background:var(--gold, #C9A84C); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
-    .conv-name { font-weight:600; font-size:.83rem; }
-    .conv-last { font-size:.71rem; color:var(--muted); margin-top:.1rem; }
-    .chat-area { display:flex; flex-direction:column; overflow:hidden; }
-    .chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:.4rem; font-size:.86rem; }
-    .chat-header { display:flex; align-items:center; gap:.7rem; padding:.7rem 1.1rem; border-bottom:1.5px solid var(--border); background:var(--cream); flex-shrink:0; font-weight:600; font-size:.88rem; }
-    #msgsWrap { flex:1; overflow-y:auto; padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.5rem; }
-    .chat-input-row { display:flex; gap:.5rem; padding:.7rem 1rem; border-top:1.5px solid var(--border); background:var(--cream); flex-shrink:0; }
-    .chat-input-row input { flex:1; padding:.52rem .85rem; border:1.5px solid var(--border); border-radius:8px; font-family:Jost,sans-serif; font-size:.85rem; outline:none; transition:border-color .15s; }
-    .chat-input-row input:focus { border-color:var(--gold, #C9A84C); }
-    .msg { display:flex; flex-direction:column; max-width:68%; }
-    .msg-me { align-self:flex-end; align-items:flex-end; }
-    .msg-other { align-self:flex-start; align-items:flex-start; }
-    .msg-sender { font-size:.68rem; font-weight:700; color:var(--muted); margin-bottom:.12rem; text-transform:uppercase; letter-spacing:.04em; }
-    .msg-bubble { padding:.5rem .85rem; border-radius:14px; font-size:.85rem; line-height:1.5; word-break:break-word; }
-    .msg-me .msg-bubble { background:var(--gold, #C9A84C); color:#fff; border-bottom-right-radius:4px; }
-    .msg-other .msg-bubble { background:var(--cream); border:1.5px solid var(--border); border-bottom-left-radius:4px; }
-    .msg-time { font-size:.67rem; color:var(--muted); margin-top:.18rem; }
-    .chat-empty-msgs { color:var(--muted); font-size:.82rem; text-align:center; padding:2rem; }
-    /* Notifications */
-    .notif-item { display:flex; align-items:flex-start; gap:.8rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); transition:background .12s; cursor:default; }
-    .notif-item.unread { background:rgba(201,168,76,.06); border-left:3px solid var(--gold, #C9A84C); }
-    .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--gold, #C9A84C); flex-shrink:0; margin-top:.35rem; }
-    .notif-dot.read { background:var(--border); }
-    .notif-title { font-size:.84rem; font-weight:600; }
-    .notif-meta  { font-size:.71rem; color:var(--muted); margin-top:.12rem; }
+ <meta charset="UTF-8"/>
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+ <title>ENT Salé — Espace Étudiant</title>
+ <link rel="preconnect" href="https://fonts.googleapis.com"/>
+ <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+ <link rel="stylesheet" href="style.css?v=1773360858"/>
+ <style>
+ /* Styles critiques inline — indépendants du cache style.css */
+ .panel { display: none !important; }
+ .panel.active { display: block !important; }
+ /* ── CHAT ÉTUDIANT ──────────────────────────────────────────────── */
+ .chat-layout { display:grid; grid-template-columns:260px 1fr; height:calc(100vh - 200px); min-height:420px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; }
+ .conv-list { border-right:1.5px solid var(--border); display:flex; flex-direction:column; background:var(--cream); }
+ .conv-list-head { display:flex; align-items:center; justify-content:space-between; padding:.7rem 1rem; font-weight:700; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; border-bottom:1.5px solid var(--border); background:#fff; flex-shrink:0; }
+ #convItems { flex:1; overflow-y:auto; }
+ .conv-item { display:flex; align-items:center; gap:.65rem; padding:.7rem 1rem; cursor:pointer; border-bottom:1px solid var(--border); transition:background .12s; }
+ .conv-item:hover { background:rgba(201,168,76,.08); }
+ .conv-avatar { width:36px; height:36px; border-radius:50%; background:var(--gold, #C9A84C); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
+ .conv-name { font-weight:600; font-size:.83rem; }
+ .conv-last { font-size:.71rem; color:var(--muted); margin-top:.1rem; }
+ .chat-area { display:flex; flex-direction:column; overflow:hidden; }
+ .chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:.4rem; font-size:.86rem; }
+ .chat-header { display:flex; align-items:center; gap:.7rem; padding:.7rem 1.1rem; border-bottom:1.5px solid var(--border); background:var(--cream); flex-shrink:0; font-weight:600; font-size:.88rem; }
+ #msgsWrap { flex:1; overflow-y:auto; padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.5rem; }
+ .chat-input-row { display:flex; gap:.5rem; padding:.7rem 1rem; border-top:1.5px solid var(--border); background:var(--cream); flex-shrink:0; }
+ .chat-input-row input { flex:1; padding:.52rem .85rem; border:1.5px solid var(--border); border-radius:8px; font-family:Jost,sans-serif; font-size:.85rem; outline:none; transition:border-color .15s; }
+ .chat-input-row input:focus { border-color:var(--gold, #C9A84C); }
+ .msg { display:flex; flex-direction:column; max-width:68%; }
+ .msg-me { align-self:flex-end; align-items:flex-end; }
+ .msg-other { align-self:flex-start; align-items:flex-start; }
+ .msg-sender { font-size:.68rem; font-weight:700; color:var(--muted); margin-bottom:.12rem; text-transform:uppercase; letter-spacing:.04em; }
+ .msg-bubble { padding:.5rem .85rem; border-radius:14px; font-size:.85rem; line-height:1.5; word-break:break-word; }
+ .msg-me .msg-bubble { background:var(--gold, #C9A84C); color:#fff; border-bottom-right-radius:4px; }
+ .msg-other .msg-bubble { background:var(--cream); border:1.5px solid var(--border); border-bottom-left-radius:4px; }
+ .msg-time { font-size:.67rem; color:var(--muted); margin-top:.18rem; }
+ .chat-empty-msgs { color:var(--muted); font-size:.82rem; text-align:center; padding:2rem; }
+ /* Notifications */
+ .notif-item { display:flex; align-items:flex-start; gap:.8rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); transition:background .12s; cursor:default; }
+ .notif-item.unread { background:rgba(201,168,76,.06); border-left:3px solid var(--gold, #C9A84C); }
+ .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--gold, #C9A84C); flex-shrink:0; margin-top:.35rem; }
+ .notif-dot.read { background:var(--border); }
+ .notif-title { font-size:.84rem; font-weight:600; }
+ .notif-meta { font-size:.71rem; color:var(--muted); margin-top:.12rem; }
 
-  </style>
+ </style>
 </head>
 <body>
 
-  <!-- ══ SIDEBAR ══ -->
-  <nav class="sidebar">
-    <div class="sidebar-head">
-      <div class="brand">
-        <div class="brand-icon">🎓</div>
-        <div class="brand-text">
-          <span class="brand-sup">ENT Salé</span>
-          <span class="brand-name">Espace Étudiant</span>
-        </div>
-      </div>
-      <div class="user-chip">
-        <div class="avatar" id="avatarEl">É</div>
-        <div class="user-info">
-          <span class="user-name" id="userNameEl">Étudiant</span>
-          <span class="user-role">Étudiant · EST Salé</span>
-        </div>
-      </div>
-    </div>
+ <!-- ══ SIDEBAR ══ -->
+ <nav class="sidebar">
+ <div class="sidebar-head">
+ <div class="brand">
+ <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+ <div class="brand-text">
+ <span class="brand-sup">ENT Salé</span>
+ <span class="brand-name">Espace Étudiant</span>
+ </div>
+ </div>
+ <div class="user-chip">
+ <div class="avatar" id="avatarEl">É</div>
+ <div class="user-info">
+ <span class="user-name" id="userNameEl">Étudiant</span>
+ <span class="user-role">Étudiant · EST Salé</span>
+ </div>
+ </div>
+ </div>
 
-    <nav class="nav-list">
-      <div class="nav-group">
-        <span class="nav-label">Mon espace</span>
-        <a class="nav-item active" data-panel="accueil"    href="#"><span class="nav-icon">🏠</span>Accueil</a>
-        <a class="nav-item"        data-panel="cours"      href="#"><span class="nav-icon">📚</span>Cours &amp; Fichiers</a>
-        <a class="nav-item"        data-panel="notes"      href="#"><span class="nav-icon">📊</span>Mes Notes</a>
-        <a class="nav-item"        data-panel="emploi"     href="#"><span class="nav-icon">📅</span>Emploi du temps</a>
-      </div>
-      <div class="nav-group">
-        <span class="nav-label">Demandes</span>
-        <a class="nav-item" data-panel="releve"     href="#"><span class="nav-icon">📄</span>Relevé de notes</a>
-        <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon">🏆</span>Mon classement</a>
-      </div>
-      <div class="nav-group">
-        <span class="nav-label">Communication</span>
-        <a class="nav-item" data-panel="notifs" href="#"><span class="nav-icon">🔔</span>Notifications</a>
-        <a class="nav-item" id="chatNavItem" data-panel="chat" href="#" style="display:none"><span class="nav-icon">💬</span>Chat (délégué)</a>
-      </div>
-    </nav>
+ <nav class="nav-list">
+ <div class="nav-group">
+ <span class="nav-label">Mon espace</span>
+ <a class="nav-item active" data-panel="accueil" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Accueil</a>
+ <a class="nav-item" data-panel="cours" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>Cours &amp; Fichiers</a>
+ <a class="nav-item" data-panel="notes" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></span>Mes Notes</a>
+ <a class="nav-item" data-panel="emploi" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Emploi du temps</a>
+ </div>
+ <div class="nav-group">
+ <span class="nav-label">Demandes</span>
+ <a class="nav-item" data-panel="releve" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>Relevé de notes</a>
+ <a class="nav-item" data-panel="classement" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg></span>Mon classement</a>
+ </div>
+ <div class="nav-group">
+ <span class="nav-label">Communication</span>
+ <a class="nav-item" data-panel="notifs" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>Notifications</a>
+ <a class="nav-item" id="chatNavItem" data-panel="chat" href="#" style="display:none"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Chat (délégué)</a>
+ </div>
+ </nav>
 
-    <div class="sidebar-foot">
-      <button class="logout-btn" id="logoutBtn">🚪 Déconnexion</button>
-    </div>
-  </nav>
+ <div class="sidebar-foot">
+ <button class="logout-btn" id="logoutBtn"> Déconnexion</button>
+ </div>
+ </nav>
 
-  <!-- ══ MAIN ══ -->
-  <div class="main">
+ <!-- ══ MAIN ══ -->
+ <div class="main">
 
-    <header class="topbar">
-      <h2 class="topbar-title" id="topbarTitle">Accueil</h2>
-      <span class="topbar-date" id="topbarDate"></span>
-    </header>
+ <header class="topbar">
+ <h2 class="topbar-title" id="topbarTitle">Accueil</h2>
+ <span class="topbar-date" id="topbarDate"></span>
+ </header>
 
-    <div class="content">
+ <div class="content">
 
-      <!-- ACCUEIL -->
-      <section class="panel active" id="panel-accueil">
-        <div class="welcome-banner">
-          <div class="wb-text">
-            <h3>Bienvenue, <span id="welcomeName">Étudiant</span> 👋</h3>
-            <p>EST Salé · <span id="welcomeDate"></span></p>
-          </div>
-          <div class="wb-icon">🎓</div>
-        </div>
-        <div class="stats-strip">
-          <div class="stat-mini"><span class="sm-icon">📁</span><div><div class="sm-val" id="nbFiles">—</div><div class="sm-lbl">Fichiers dispo.</div></div></div>
-          <div class="stat-mini"><span class="sm-icon">📚</span><div><div class="sm-val" id="nbModules">—</div><div class="sm-lbl">Modules</div></div></div>
-          <div class="stat-mini"><span class="sm-icon">📅</span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances / sem.</div></div></div>
-        </div>
-        <div class="section-head"><h3 class="section-title">Fichiers récents</h3><a href="#" class="link-more" data-panel="cours">Voir tout →</a></div>
-        <div class="cards-grid" id="recentGrid"></div>
-      </section>
+ <!-- ACCUEIL -->
+ <section class="panel active" id="panel-accueil">
+ <div class="welcome-banner">
+ <div class="wb-text">
+ <h3>Bienvenue, <span id="welcomeName">Étudiant</span> </h3>
+ <p>EST Salé · <span id="welcomeDate"></span></p>
+ </div>
+ <div class="wb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+ </div>
+ <div class="stats-strip">
+ <div class="stat-mini"><span class="sm-icon"></span><div><div class="sm-val" id="nbFiles">—</div><div class="sm-lbl">Fichiers dispo.</div></div></div>
+ <div class="stat-mini"><span class="sm-icon"></span><div><div class="sm-val" id="nbModules">—</div><div class="sm-lbl">Modules</div></div></div>
+ <div class="stat-mini"><span class="sm-icon"></span><div><div class="sm-val" id="nbSeances">—</div><div class="sm-lbl">Séances / sem.</div></div></div>
+ </div>
+ <div class="section-head"><h3 class="section-title">Fichiers récents</h3><a href="#" class="link-more" data-panel="cours">Voir tout →</a></div>
+ <div class="cards-grid" id="recentGrid"></div>
+ </section>
 
-      <!-- COURS -->
-      <section class="panel" id="panel-cours">
-        <div class="section-head"><h3 class="section-title">Cours &amp; Fichiers</h3></div>
-        <div class="filter-bar">
-          <button class="filter-btn active" data-cat="">Tous</button>
-          <button class="filter-btn" data-cat="cours">📖 Cours</button>
-          <button class="filter-btn" data-cat="td">✏️ TD</button>
-          <button class="filter-btn" data-cat="tp">🔬 TP</button>
-          <button class="filter-btn" data-cat="examen">📝 Examens</button>
-        </div>
-        <div class="cards-grid" id="allFilesGrid"></div>
-      </section>
+ <!-- COURS -->
+ <section class="panel" id="panel-cours">
+ <div class="section-head"><h3 class="section-title">Cours &amp; Fichiers</h3></div>
+ <div class="filter-bar">
+ <button class="filter-btn active" data-cat="">Tous</button>
+ <button class="filter-btn" data-cat="cours"> Cours</button>
+ <button class="filter-btn" data-cat="td"> TD</button>
+ <button class="filter-btn" data-cat="tp"> TP</button>
+ <button class="filter-btn" data-cat="examen"> Examens</button>
+ </div>
+ <div class="cards-grid" id="allFilesGrid"></div>
+ </section>
 
-      <!-- NOTES -->
-      <section class="panel" id="panel-notes">
-        <div id="notesContent"></div>
-      </section>
+ <!-- NOTES -->
+ <section class="panel" id="panel-notes">
+ <div id="notesContent"></div>
+ </section>
 
-      <!-- EMPLOI DU TEMPS -->
-      <section class="panel" id="panel-emploi">
-        <div class="section-head">
-          <h3 class="section-title">Emploi du temps</h3>
-          <button class="btn btn-outline btn-sm" id="refreshEmploiBtn">↻ Actualiser</button>
-        </div>
-        <div id="emploiContent"></div>
-      </section>
+ <!-- EMPLOI DU TEMPS -->
+ <section class="panel" id="panel-emploi">
+ <div class="section-head">
+ <h3 class="section-title">Emploi du temps</h3>
+ <button class="btn btn-outline btn-sm" id="refreshEmploiBtn">↻ Actualiser</button>
+ </div>
+ <div id="emploiContent"></div>
+ </section>
 
-      <!-- RELEVÉ -->
-      <section class="panel" id="panel-releve">
-        <div class="section-head"><h3 class="section-title">Demande de relevé de notes</h3></div>
-        <div class="form-card">
-          <p class="form-card-desc">Sélectionnez le semestre pour lequel vous souhaitez un relevé de notes officiel.</p>
-          <div class="form-group">
-            <label>Semestre</label>
-            <select class="select-sm" id="releveSelect" style="width:100%">
-              <option value="">Chargement…</option>
-            </select>
-          </div>
-          <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.75rem;margin-top:.5rem">Envoyer la demande</button>
-          <div id="releveResult" style="margin-top:1rem"></div>
-        </div>
-      </section>
+ <!-- RELEVÉ -->
+ <section class="panel" id="panel-releve">
+ <div class="section-head"><h3 class="section-title">Demande de relevé de notes</h3></div>
+ <div class="form-card">
+ <p class="form-card-desc">Sélectionnez le semestre pour lequel vous souhaitez un relevé de notes officiel.</p>
+ <div class="form-group">
+ <label>Semestre</label>
+ <select class="select-sm" id="releveSelect" style="width:100%">
+ <option value="">Chargement…</option>
+ </select>
+ </div>
+ <button class="btn btn-gold" id="submitReleveBtn" style="width:100%;padding:.75rem;margin-top:.5rem">Envoyer la demande</button>
+ <div id="releveResult" style="margin-top:1rem"></div>
+ </div>
+ </section>
 
-      <!-- CLASSEMENT -->
-      <section class="panel" id="panel-classement">
-        <div class="section-head"><h3 class="section-title">Mon classement</h3></div>
-        <div id="classementContent"></div>
-      </section>
+ <!-- CLASSEMENT -->
+ <section class="panel" id="panel-classement">
+ <div class="section-head"><h3 class="section-title">Mon classement</h3></div>
+ <div id="classementContent"></div>
+ </section>
 
-      <!-- NOTIFICATIONS -->
-      <section class="panel" id="panel-notifs">
-        <div class="section-head">
-          <h3 class="section-title">🔔 Notifications</h3>
-          <div style="display:flex;gap:.5rem">
-            <button class="btn btn-outline btn-sm" onclick="markAllNotifsRead()">✓ Tout lire</button>
-            <button class="btn btn-outline btn-sm" onclick="loadNotifs()">↻</button>
-          </div>
-        </div>
-        <div id="notifsList"></div>
-      </section>
+ <!-- NOTIFICATIONS -->
+ <section class="panel" id="panel-notifs">
+ <div class="section-head">
+ <h3 class="section-title"> Notifications</h3>
+ <div style="display:flex;gap:.5rem">
+ <button class="btn btn-outline btn-sm" onclick="markAllNotifsRead()">Tout lire</button>
+ <button class="btn btn-outline btn-sm" onclick="loadNotifs()">↻</button>
+ </div>
+ </div>
+ <div id="notifsList"></div>
+ </section>
 
-      <!-- CHAT DÉLÉGUÉ -->
-      <section class="panel" id="panel-chat">
-        <div class="chat-layout">
-          <div class="conv-list">
-            <div class="conv-list-head">
-              <span>Conversations</span>
-              <button class="btn btn-gold btn-sm" onclick="openChatModal()">+ Nouvelle</button>
-            </div>
-            <div id="convItems"><div class="loader"></div></div>
-          </div>
-          <div class="chat-area" id="chatArea">
-            <div class="chat-empty">
-              <div style="font-size:2.5rem">💬</div>
-              <p>Sélectionnez une conversation</p>
-            </div>
-          </div>
-        </div>
-        <!-- Modal nouvelle conversation -->
-        <div id="chatModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center">
-          <div style="background:#fff;border-radius:14px;padding:1.5rem;width:min(440px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.2)">
-            <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:1rem">Nouvelle conversation</h3>
-            <div style="margin-bottom:.8rem">
-              <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.3rem">Rechercher un enseignant</label>
-              <input type="text" id="chatSearchInput" placeholder="Nom ou prénom…" oninput="chatSearchUsers(this.value)"
-                style="width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif;font-size:.85rem;outline:none;box-sizing:border-box"/>
-            </div>
-            <div id="chatUserList" style="max-height:240px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;margin-bottom:1rem;min-height:48px"></div>
-            <div style="display:flex;gap:.6rem;justify-content:flex-end">
-              <button class="btn btn-outline" onclick="closeChatModal()">Annuler</button>
-              <button class="btn btn-gold" id="btnStartChat" onclick="startChatConv()" disabled>Démarrer</button>
-            </div>
-          </div>
-        </div>
-      </section>
+ <!-- CHAT DÉLÉGUÉ -->
+ <section class="panel" id="panel-chat">
+ <div class="chat-layout">
+ <div class="conv-list">
+ <div class="conv-list-head">
+ <span>Conversations</span>
+ <button class="btn btn-gold btn-sm" onclick="openChatModal()">+ Nouvelle</button>
+ </div>
+ <div id="convItems"><div class="loader"></div></div>
+ </div>
+ <div class="chat-area" id="chatArea">
+ <div class="chat-empty">
+ <div style="font-size:2.5rem"></div>
+ <p>Sélectionnez une conversation</p>
+ </div>
+ </div>
+ </div>
+ <!-- Modal nouvelle conversation -->
+ <div id="chatModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center">
+ <div style="background:#fff;border-radius:14px;padding:1.5rem;width:min(440px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.2)">
+ <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:1rem">Nouvelle conversation</h3>
+ <div style="margin-bottom:.8rem">
+ <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.3rem">Rechercher un enseignant</label>
+ <input type="text" id="chatSearchInput" placeholder="Nom ou prénom…" oninput="chatSearchUsers(this.value)"
+ style="width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:Jost,sans-serif;font-size:.85rem;outline:none;box-sizing:border-box"/>
+ </div>
+ <div id="chatUserList" style="max-height:240px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;margin-bottom:1rem;min-height:48px"></div>
+ <div style="display:flex;gap:.6rem;justify-content:flex-end">
+ <button class="btn btn-outline" onclick="closeChatModal()">Annuler</button>
+ <button class="btn btn-gold" id="btnStartChat" onclick="startChatConv()" disabled>Démarrer</button>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    </div>
-  </div>
+ </div>
+ </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
+ <!-- Toast -->
+ <div class="toast" id="toast"></div>
 
-  <script src="app.js"></script>
-  <script src="ia-chat.js"></script>
+ <script src="app.js"></script>
+ <script src="ia-chat.js"></script>
 </body>
 </html>

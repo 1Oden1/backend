@@ -25,8 +25,8 @@
  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
  white-space: nowrap;
  }
- .tab-btn:hover { border-color: #C9A84C; color: #C9A84C; }
- .tab-btn.active { background: #C9A84C; border-color: #C9A84C; color: #fff; }
+ .tab-btn:hover { border-color: #0066CC; color: #0066CC; }
+ .tab-btn.active { background: #0066CC; border-color: #0066CC; color: #fff; }
  .tab-bar { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
 
  /* ── Composants redesign ── */
@@ -36,16 +36,16 @@
  padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.45rem;
  transition:box-shadow .2s,transform .2s; position:relative; overflow:hidden;
  }
- .entity-card:hover { box-shadow:0 6px 20px rgba(201,168,76,.14); transform:translateY(-2px); }
+ .entity-card:hover { box-shadow:0 6px 20px rgba(0,102,204,.1); transform:translateY(-2px); }
  .entity-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
- background:linear-gradient(90deg,var(--gold-dark),var(--gold-light)); }
+ background:linear-gradient(90deg,var(--azure-dark),var(--azure-light)); }
  .entity-card .ec-id { font-size:.62rem; color:var(--muted); font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
  .entity-card .ec-name { font-family:'Cormorant Garamond',serif; font-size:1.05rem; font-weight:700; color:var(--dark); }
  .entity-card .ec-sub { font-size:.75rem; color:var(--muted); }
  .entity-card .ec-actions { margin-top:.3rem; display:flex; gap:.4rem; }
  .cascade-bar {
  display:flex; flex-wrap:wrap; gap:.75rem; align-items:flex-end;
- padding:1rem 1.2rem; background:var(--cream); border:1.5px solid var(--border);
+ padding:1rem 1.2rem; background:var(--bg); border:1.5px solid var(--border);
  border-radius:10px; margin-bottom:1.2rem;
  }
  .cascade-bar .cb-field { display:flex; flex-direction:column; gap:.3rem; }
@@ -56,10 +56,10 @@
  background:var(--white); min-width:145px; outline:none; cursor:pointer;
  transition:border-color .18s;
  }
- .cascade-bar select:focus { border-color:var(--gold); }
- .cascade-bar select:disabled { opacity:.45; cursor:not-allowed; background:var(--cream); }
+ .cascade-bar select:focus { border-color:var(--azure); }
+ .cascade-bar select:disabled { opacity:.45; cursor:not-allowed; background:var(--bg); }
  .info-box {
- background:var(--cream); border:1.5px solid var(--border); border-radius:10px;
+ background:var(--bg); border:1.5px solid var(--border); border-radius:10px;
  padding:1rem 1.2rem; font-size:.85rem;
  }
  .info-box-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem .8rem; }
@@ -67,7 +67,7 @@
  .info-box-item .ib-label { font-size:.62rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:700; }
  .info-box-item .ib-val { font-size:.9rem; font-weight:600; color:var(--dark); }
  .progress-bar { height:6px; border-radius:99px; background:var(--border); overflow:hidden; margin:.5rem 0; }
- .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gold-dark),var(--gold)); transition:width .4s; }
+ .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--azure-dark),var(--azure-light)); transition:width .4s; }
  .demand-card {
  background:var(--white); border:1.5px solid var(--border); border-radius:10px;
  padding:.9rem 1.1rem; margin-bottom:.6rem; display:flex; align-items:center; gap:1rem;
@@ -91,8 +91,8 @@
  padding:.85rem 1.1rem; margin-bottom:.55rem; display:flex; gap:.85rem; align-items:flex-start;
  transition:background .15s;
  }
- .notif-card.unread { background:rgba(201,168,76,.05); border-color:rgba(201,168,76,.3); }
- .notif-dot { width:9px; height:9px; border-radius:50%; background:var(--gold); flex-shrink:0; margin-top:4px; }
+ .notif-card.unread { background:rgba(0,102,204,.05); border-color:rgba(0,102,204,.25); }
+ .notif-dot { width:9px; height:9px; border-radius:50%; background:var(--azure); flex-shrink:0; margin-top:4px; }
  .notif-dot.read { background:var(--border); }
  .notif-body { flex:1; }
  .notif-title { font-size:.84rem; font-weight:600; }
@@ -117,7 +117,7 @@
  border-right: 1.5px solid var(--border);
  display: flex;
  flex-direction: column;
- background: var(--cream);
+ background: var(--bg);
  overflow: hidden;
  }
  .conv-list-head {
@@ -146,12 +146,12 @@
  border-bottom: 1px solid var(--border);
  transition: background .12s;
  }
- .conv-item:hover { background: rgba(201,168,76,.07); }
- .conv-item.active { background: rgba(201,168,76,.13); border-left: 3px solid var(--gold); }
+ .conv-item:hover { background: rgba(0,102,204,.07); }
+ .conv-item.active { background: rgba(0,102,204,.1); border-left: 3px solid var(--azure); }
  .conv-avatar {
  width: 38px; height: 38px;
  border-radius: 50%;
- background: var(--gold);
+ background: var(--azure);
  color: #fff;
  display: flex; align-items: center; justify-content: center;
  font-weight: 700; font-size: .95rem;
@@ -181,7 +181,7 @@
  gap: .75rem;
  padding: .75rem 1.1rem;
  border-bottom: 1.5px solid var(--border);
- background: var(--cream);
+ background: var(--bg);
  flex-shrink: 0;
  font-weight: 600;
  font-size: .9rem;
@@ -199,7 +199,7 @@
  gap: .5rem;
  padding: .75rem 1rem;
  border-top: 1.5px solid var(--border);
- background: var(--cream);
+ background: var(--bg);
  flex-shrink: 0;
  }
  .chat-input-row input {
@@ -213,7 +213,7 @@
  transition: border-color .15s;
  background: var(--white);
  }
- .chat-input-row input:focus { border-color: var(--gold); }
+ .chat-input-row input:focus { border-color: var(--azure); }
  .msg { display: flex; flex-direction: column; max-width: 68%; }
  .msg-me { align-self: flex-end; align-items: flex-end; }
  .msg-other { align-self: flex-start; align-items: flex-start; }
@@ -225,8 +225,8 @@
  line-height: 1.5;
  word-break: break-word;
  }
- .msg-me .msg-bubble { background: var(--gold); color: #fff; border-bottom-right-radius: 4px; }
- .msg-other .msg-bubble { background: var(--cream); border: 1.5px solid var(--border); border-bottom-left-radius: 4px; }
+ .msg-me .msg-bubble { background: var(--azure); color: #fff; border-bottom-right-radius: 4px; }
+ .msg-other .msg-bubble { background: var(--bg); border: 1.5px solid var(--border); border-bottom-left-radius: 4px; }
  .msg-time { font-size: .67rem; color: var(--muted); margin-top: .2rem; }
  .chat-empty-msgs { color: var(--muted); font-size: .83rem; text-align: center; padding: 2rem; }
  /* conv-user-item hover via JS */
@@ -460,7 +460,7 @@
  </div>
 
  <!-- Sélecteurs en cascade -->
- <div id="vue-selectors" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-bottom:1.5rem;padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
+ <div id="vue-selectors" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-bottom:1.5rem;padding:1rem;background:var(--bg);border:1.5px solid var(--border);border-radius:10px">
  <div>
  <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Année universitaire</label>
  <select id="vueAnneeSelect" onchange="vueOnAnneeChange()"
@@ -574,8 +574,8 @@
  vers les étudiants de la filière.
  </p>
  <label style="display:flex;align-items:center;gap:.55rem;font-size:.83rem;cursor:pointer;margin-bottom:1rem;
- padding:.65rem .85rem;background:var(--cream);border-radius:8px;border:1.5px solid var(--border)">
- <input type="checkbox" id="pubForce" style="width:15px;height:15px;accent-color:var(--gold)"/>
+ padding:.65rem .85rem;background:var(--bg);border-radius:8px;border:1.5px solid var(--border)">
+ <input type="checkbox" id="pubForce" style="width:15px;height:15px;accent-color:var(--azure)"/>
  <span>Forcer même si des notes manquent</span>
  </label>
  <button class="btn btn-gold" onclick="publierNotes()" style="width:100%;padding:.72rem">
@@ -646,7 +646,7 @@
 
  <!-- Sélecteurs en cascade -->
  <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-bottom:1.5rem;
- padding:1rem;background:var(--cream);border:1.5px solid var(--border);border-radius:10px">
+ padding:1rem;background:var(--bg);border:1.5px solid var(--border);border-radius:10px">
  <div>
  <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Année</label>
  <select id="nvAnnee" onchange="nvOnAnnee()"
@@ -734,7 +734,7 @@
  style="width:100%;padding:.75rem;border:1.5px solid var(--border);border-radius:8px;
  font-family:Jost,sans-serif;font-size:.88rem;resize:vertical;
  background:var(--white);outline:none;transition:border-color .2s"
- onfocus="this.style.borderColor='var(--gold)'"
+ onfocus="this.style.borderColor='var(--azure)'"
  onblur="this.style.borderColor='var(--border)'"></textarea>
  </div>
  <button class="btn btn-gold" onclick="sendBroadcast()" style="width:100%;padding:.76rem;margin-top:.8rem">
@@ -783,7 +783,7 @@
  style="width:100%;padding:.72rem;border:1.5px solid var(--border);border-radius:8px;
  font-family:Jost,sans-serif;font-size:.88rem;resize:vertical;
  background:var(--white);outline:none;transition:border-color .2s"
- onfocus="this.style.borderColor='var(--gold)'"
+ onfocus="this.style.borderColor='var(--azure)'"
  onblur="this.style.borderColor='var(--border)'"
  placeholder="Détails de l'événement…"></textarea>
  </div>
@@ -1067,7 +1067,7 @@
  oninput="searchConvUsers(this.value)"
  style="width:100%;padding:.65rem .85rem;border:1.5px solid var(--border);
  border-radius:8px;font-family:Jost,sans-serif;outline:none"
- onfocus="this.style.borderColor='var(--gold)'"
+ onfocus="this.style.borderColor='var(--azure)'"
  onblur="this.style.borderColor='var(--border)'"/>
  </div>
  <div id="convUserList"
@@ -1077,7 +1077,7 @@
  Tapez pour rechercher…
  </div>
  </div>
- <div id="convSelectedInfo" style="display:none;padding:.6rem .85rem;background:var(--cream);
+ <div id="convSelectedInfo" style="display:none;padding:.6rem .85rem;background:var(--bg);
  border:1.5px solid var(--border);border-radius:8px;margin-bottom:.8rem;font-size:.83rem">
  </div>
  <div class="modal-foot">
@@ -1364,7 +1364,7 @@ function _renderPlanning(d) {
  // En-tête info
  var anneeLabel = ge('vueAnneeSelect') ? ge('vueAnneeSelect').options[ge('vueAnneeSelect').selectedIndex].text :'';
  var deptLabel = ge('vueDeptSelect') ? ge('vueDeptSelect').options[ge('vueDeptSelect').selectedIndex].text :'';
- var header ='<div style="background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:var(--dark);'
+ var header ='<div style="background:linear-gradient(135deg,var(--azure-dark),var(--azure));color:var(--dark);'
  +'border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.2rem;display:flex;flex-wrap:wrap;gap:.5rem 2rem;align-items:center">'
  +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;font-weight:700">Emploi du temps</div>'
  +'<div style="font-size:.83rem;opacity:.85">'+esc(anneeLabel)
@@ -1416,7 +1416,7 @@ function _renderPlanning(d) {
  // En-tête des colonnes
  grid +='<div style="background:transparent"></div>';
  joursPresents.forEach(function(j) {
- grid +='<div style="background:var(--gold);color:var(--dark);font-weight:700;font-size:.78rem;'
+ grid +='<div style="background:var(--azure);color:var(--dark);font-weight:700;font-size:.78rem;'
  +'padding:.5rem;text-align:center;border-radius:6px;letter-spacing:.05em">'+j+'</div>';
  });
 
@@ -1426,7 +1426,7 @@ function _renderPlanning(d) {
  var hDeb = parts[0], hFin = parts[1];
 
  // Colonne heure
- grid +='<div style="background:var(--cream);border:1px solid var(--border);border-radius:6px;'
+ grid +='<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;'
  +'padding:.4rem .5rem;font-size:.73rem;color:var(--muted);text-align:center;display:flex;flex-direction:column;justify-content:center">'
  +'<strong>'+esc(hDeb)+'</strong><div>'+esc(hFin)+'</div></div>';
 
@@ -1664,7 +1664,7 @@ window.loadUsers = function() {
  var su = ge('st-users'); if (su) su.textContent = users.length;
  if (!users.length) { wrap.innerHTML = empty('','Aucun utilisateur'); return; }
  wrap.innerHTML ='<table><thead><tr>'+'<th>Nom</th><th>Username</th><th>UUID Keycloak</th><th>Email</th><th>Rôle(s)</th><th>Actif</th><th>Actions</th>'+'</tr></thead><tbody>'+ users.map(function(u) {
- return'<tr>'+'<td style="white-space:nowrap">'+esc(u.first_name)+''+esc(u.last_name)+'</td>'+'<td><code>'+esc(u.username)+'</code></td>'+'<td>'+'<div style="display:flex;align-items:center;gap:.4rem">'+'<code style="font-size:.72rem;color:var(--muted);letter-spacing:.02em">'+esc(u.id)+'</code>'+'<button class="btn btn-outline btn-sm" style="padding:.15rem .5rem;font-size:.7rem;flex-shrink:0"'+' onclick="copyUUID(\''+u.id+'\',this)" title="Copier"></button>'+'</div>'+'</td>'+'<td>'+esc(u.email)+'</td>'+'<td>'+(u.roles||[]).map(function(r){ return'<span class="badge badge-'+r+'">'+r+'</span>'; }).join('')+'</td>'+'<td>'+(u.enabled?'':'')+'</td>'+'<td class="td-actions">'+'<button class="btn btn-outline btn-sm" onclick="editUser(\''+u.id+'\',\''+esc(u.first_name)+'\',\''+esc(u.last_name)+'\',\''+esc(u.email)+'\',\''+esc((u.roles||[])[0]||'')+'\','+(u.enabled?'true':'false')+')" style="margin-right:.3rem"></button>'+'<button class="btn btn-outline btn-sm" onclick="resetPassword(\''+u.id+'\')" style="margin-right:.3rem" title="Réinitialiser MDP"></button>'+'<button class="btn btn-danger btn-sm" onclick="deleteUser(\''+u.id+'\')"></button>'+'</td>'+'</tr>';
+ return'<tr>'+'<td style="white-space:nowrap">'+esc(u.first_name)+''+esc(u.last_name)+'</td>'+'<td><code>'+esc(u.username)+'</code></td>'+'<td>'+'<div style="display:flex;align-items:center;gap:.4rem">'+'<code style="font-size:.72rem;color:var(--muted);letter-spacing:.02em">'+esc(u.id)+'</code>'+'<button class="btn btn-outline btn-sm" style="padding:.15rem .5rem;font-size:.7rem;flex-shrink:0"'+' onclick="copyUUID(\''+u.id+'\',this)" title="Copier"></button>'+'</div>'+'</td>'+'<td>'+esc(u.email)+'</td>'+'<td>'+(u.roles||[]).map(function(r){ return'<span class="badge badge-'+r+'">'+r+'</span>'; }).join('')+'</td>'+'<td>'+(u.enabled?'Actif':'Inactif')+'</td>'+'<td class="td-actions">'+'<button class="btn btn-outline btn-sm" onclick="editUser(\''+u.id+'\',\''+esc(u.first_name)+'\',\''+esc(u.last_name)+'\',\''+esc(u.email)+'\',\''+esc((u.roles||[])[0]||'')+'\','+(u.enabled?'true':'false')+')" style="margin-right:.3rem"></button>'+'<button class="btn btn-outline btn-sm" onclick="resetPassword(\''+u.id+'\')" style="margin-right:.3rem" title="Réinitialiser MDP"></button>'+'<button class="btn btn-danger btn-sm" onclick="deleteUser(\''+u.id+'\')"></button>'+'</td>'+'</tr>';
  }).join('')
  +'</tbody></table>';
  }).catch(function(e) { wrap.innerHTML = empty('', String(e.message||e)); });
@@ -2008,7 +2008,7 @@ window.loadModules = function() {
  ?'<table style="width:100%;font-size:.83rem"><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Type</th><th>Coeff.</th><th></th></tr></thead><tbody>'+ elements.map(function(e){ return'<tr><td><strong>'+e.id+'</strong></td><td>'+esc(e.nom)+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.type)+'</td><td>'+e.coefficient+'</td>'
  +'<td>'+'<button class="btn btn-outline btn-sm" style="padding:.1rem .3rem" onclick="editElement('+e.id+',\''+esc(e.nom)+'\',\''+esc(e.code)+'\','+e.coefficient+',\''+esc(e.type)+'\','+e.module_id+')" ></button>'+'<button class="btn btn-danger btn-sm" style="padding:.1rem .3rem" onclick="deleteElement('+e.id+')"></button></td></tr>'; }).join('')
  +'</tbody></table>':'<p style="font-size:.82rem;color:var(--muted)">Aucun élément.</p>';
- results[i] ='<div style="background:var(--cream);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.8rem">'
+ results[i] ='<div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.8rem">'
  +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">'
  +'<strong>['+esc(m.code)+']'+esc(m.nom)+'</strong>'
  +'<div style="display:flex;align-items:center;gap:.5rem">'
@@ -2314,13 +2314,13 @@ window.checkCompletude = function() {
  if (!r.ok) return r.json().catch(function(){return{};}).then(function(d){ res.innerHTML=alertEl('err',d.detail||'Erreur'+r.status); });
  return r.json().then(function(d) {
  var pct = d.notes_attendues > 0 ? Math.round(d.notes_saisies/d.notes_attendues*100) : 0;
- res.innerHTML = '<div style="background:var(--cream);border:1.5px solid var(--border);border-radius:8px;padding:1rem;font-size:.88rem">'
+ res.innerHTML = '<div style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:1rem;font-size:.88rem">'
  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">'
  +'<div> Étudiants : <strong>'+d.nb_etudiants+'</strong></div>'
  +'<div> Éléments : <strong>'+d.nb_elements+'</strong></div>'
  +'<div> Saisies : <strong>'+d.notes_saisies+'</strong></div>'
  +'<div> Manquantes : <strong style="color:'+(d.notes_manquantes>0?'crimson':'green')+'">'+d.notes_manquantes+'</strong></div>'
- +'</div><div style="margin-top:.8rem;font-weight:600;color:'+(d.pret_a_publier?'green':'var(--gold)')+'">'
+ +'</div><div style="margin-top:.8rem;font-weight:600;color:'+(d.pret_a_publier?'green':'var(--azure)')+'">'
  +(d.pret_a_publier?' Prêt à publier ('+pct+'%)':'Incomplet —'+pct+'% saisi')
  +'</div></div>';
  });
@@ -2539,7 +2539,7 @@ window.searchConvUsers = function(q) {
  return'<div class="conv-user-item" data-uid="'+u.id+'" onclick="selectConvUser(\''+u.id+'\')"'
  +' style="padding:.65rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:.7rem;align-items:center;transition:background .12s"'
  +' >'/* hover inline supprimé */
- +'<div style="width:34px;height:34px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0">'+ name[0].toUpperCase() +'</div>'+'<div style="flex:1;min-width:0">'+'<div style="font-weight:600;font-size:.85rem">'+esc(name)+'</div>'+'<div style="font-size:.73rem;color:var(--muted)">'+esc(u.email||u.username)+'</div>'+'<div style="font-size:.68rem;color:var(--muted);margin-top:.1rem"> '+esc(roles)+'</div>'+'</div></div>';
+ +'<div style="width:34px;height:34px;border-radius:50%;background:var(--azure);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0">'+ name[0].toUpperCase() +'</div>'+'<div style="flex:1;min-width:0">'+'<div style="font-weight:600;font-size:.85rem">'+esc(name)+'</div>'+'<div style="font-size:.73rem;color:var(--muted)">'+esc(u.email||u.username)+'</div>'+'<div style="font-size:.68rem;color:var(--muted);margin-top:.1rem"> '+esc(roles)+'</div>'+'</div></div>';
  }).join('');
  }).catch(function() {
  list.innerHTML ='<div style="padding:1rem;text-align:center;color:crimson;font-size:.83rem">Erreur de chargement.</div>';
@@ -2557,7 +2557,7 @@ window.selectConvUser = function(id) {
  var btn = ge('btnStartConv');
  if (btn) btn.disabled = false;
  document.querySelectorAll('.conv-user-item').forEach(function(el){
- el.style.background = (el.getAttribute('data-uid') === id) ?'var(--cream)':'';
+ el.style.background = (el.getAttribute('data-uid') === id) ?'var(--bg)':'';
  });
 };
 
@@ -2616,9 +2616,9 @@ window.loadNotifications = function() {
  if (!notifs.length) { wrap.innerHTML = empty('','Aucune notification'); return; }
  wrap.innerHTML = notifs.map(function(n) {
  return'<div class="audit-item">'
- +'<div class="audit-dot" style="background:'+(n.is_read?'var(--muted)':'var(--gold)')+'"></div>'
+ +'<div class="audit-dot" style="background:'+(n.is_read?'var(--muted)':'var(--azure)')+'"></div>'
  +'<div style="flex:1"><div class="audit-text"><strong>'+esc(n.title)+'</strong>'
- +(!n.is_read?' <span style="font-size:.7rem;background:var(--gold);color:#fff;padding:.1rem .4rem;border-radius:6px;margin-left:.5rem">NOUVEAU</span>':'')+'</div>'
+ +(!n.is_read?' <span style="font-size:.7rem;background:var(--azure);color:#fff;padding:.1rem .4rem;border-radius:6px;margin-left:.5rem">NOUVEAU</span>':'')+'</div>'
  +'<div style="color:var(--muted);font-size:.83rem">'+esc(n.content)+'</div>'
  +'<div class="audit-time">'+(n.created_at?new Date(n.created_at).toLocaleString('fr-FR'):'')+'·'+esc(n.type)+'</div>'
  +'</div></div>';
@@ -2819,7 +2819,7 @@ function _renderNotesTable(etudiants, modulesData, notesByEtudiant, gran) {
  var filiereLabel = ge('nvFiliere').options[ge('nvFiliere').selectedIndex].text;
  var semLabel = ge('nvSemestre').options[ge('nvSemestre').selectedIndex].text;
 
- var header ='<div style="background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:var(--dark);'
+ var header ='<div style="background:linear-gradient(135deg,var(--azure-dark),var(--azure));color:var(--dark);'
  +'border-radius:10px;padding:.85rem 1.2rem;margin-bottom:1.2rem;display:flex;flex-wrap:wrap;gap:.5rem 2rem;align-items:center">'
  +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:700"> Notes</div>'
  +'<div style="font-size:.82rem;opacity:.85">'+esc(anneeLabel)+'&nbsp;|&nbsp;'+esc(deptLabel)
@@ -2852,9 +2852,9 @@ function _renderNotesTable(etudiants, modulesData, notesByEtudiant, gran) {
  if (!cols.length) return empty('','Aucun élément de module défini pour ce semestre.');
 
  // En-tête du tableau
- var thead ='<tr><th style="position:sticky;left:0;background:var(--cream);min-width:180px;z-index:1">Étudiant</th><th style="min-width:80px">CNE</th>';
+ var thead ='<tr><th style="position:sticky;left:0;background:var(--bg);min-width:180px;z-index:1">Étudiant</th><th style="min-width:80px">CNE</th>';
  cols.forEach(function(c) {
- var bg = c.isCalc ?'background:rgba(201,168,76,.12)':'';
+ var bg = c.isCalc ?'background:rgba(0,102,204,.12)':'';
  thead +='<th style="text-align:center;min-width:95px;font-size:.7rem;'+bg+'">'+esc(c.label)+'</th>';
  });
  thead +='<th style="text-align:center;min-width:100px;background:rgba(15,13,10,.06)">Moy. Gén.</th></tr>';
@@ -2885,7 +2885,7 @@ function _renderNotesTable(etudiants, modulesData, notesByEtudiant, gran) {
  }
 
  if (v!==null) allForMG.push(v);
- var bg = c.isCalc ?'background:rgba(201,168,76,.06)':'';
+ var bg = c.isCalc ?'background:rgba(0,102,204,.05)':'';
  var color = v===null ?'color:var(--muted)': (v<10 ?'color:crimson;font-weight:600': v>=14 ?'color:#2e7d32;font-weight:600':'');
  cell ='<td style="text-align:center;'+bg+'"><span style="'+color+'">'+(v!==null ? v.toFixed(2) :'—')+'</span></td>';
  return cell;
@@ -2904,8 +2904,8 @@ function _renderNotesTable(etudiants, modulesData, notesByEtudiant, gran) {
  }).join('');
 
  // Ligne statistiques (min/max/moy de la promo)
- var statRow ='<tr style="background:rgba(201,168,76,.05);font-size:.78rem">'
- +'<td style="position:sticky;left:0;background:rgba(201,168,76,.08);font-weight:700;color:var(--gold-dark)">Statistiques</td>'
+ var statRow ='<tr style="background:rgba(0,102,204,.05);font-size:.78rem">'
+ +'<td style="position:sticky;left:0;background:rgba(0,102,204,.07);font-weight:700;color:var(--azure-dark)">Statistiques</td>'
  +'<td style="color:var(--muted)">'+etudiants.length+' ét.</td>';
 
  cols.forEach(function(c) {

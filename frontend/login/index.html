@@ -5,93 +5,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ENT Salé — Connexion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css?v=1773360858"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <div class="bg-canvas"></div>
-  <div class="bg-grid"></div>
 
-  <div class="layout">
+<div class="page">
 
-    <!-- ── PANNEAU GAUCHE ── -->
-    <aside class="left-panel">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-
-      <header class="logo-block">
-        <div class="logo-icon">🎓</div>
-        <div class="logo-text">
-          <span class="logo-sup">Université Mohammed V · Rabat</span>
-          <span class="logo-main">École Supérieure de Technologie de Salé</span>
-        </div>
-      </header>
-
-      <div class="hero-text">
-        <h1>Votre <em>Espace<br/>Numérique</em><br/>de Travail</h1>
-        <p>Plateforme académique centralisée, augmentée par l'intelligence artificielle Ollama / Llama 3, pour étudiants, enseignants et administrateurs.</p>
-      </div>
-
-      <ul class="feature-pills">
-        <li>📚 Cours &amp; Fichiers</li>
-        <li>📅 Emploi du temps</li>
-        <li>📊 Notes &amp; Relevés</li>
-        <li>💬 Messagerie</li>
-        <li>🤖 IA Ollama / Llama 3</li>
-        <li>🔐 SSO Keycloak</li>
-      </ul>
-
-      <footer class="left-footer">© 2025 EST Salé · Tous droits réservés</footer>
-    </aside>
-
-    <!-- ── PANNEAU DROIT (formulaire) ── -->
-    <main class="right-panel">
-      <div class="card">
-        <div class="card-top-bar"></div>
-
-        <div class="card-header">
-          <span class="card-tag">Authentification</span>
-          <h2>Connexion<br/>à l'ENT</h2>
-          <p>Utilisez vos identifiants universitaires Keycloak.</p>
-        </div>
-
-        <div class="field">
-          <label for="username">Identifiant</label>
-          <div class="input-wrap">
-            <svg class="input-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-            <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="password">Mot de passe</label>
-          <div class="input-wrap">
-            <svg class="input-icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
-            <button class="eye-btn" id="eyeBtn" type="button" title="Afficher/masquer">
-              <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-          <a href="#" class="forgot-link">Mot de passe oublié ?</a>
-        </div>
-
-        <button class="btn-login" id="loginBtn" type="button">
-          <span id="btnLabel">Se connecter</span>
-        </button>
-
-        <div class="error-msg" id="errorBox" role="alert">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span id="errorText"></span>
-        </div>
-
-        <div class="info-divider"><span>Information</span></div>
-        <div class="info-box">
-          Vos droits d'accès (<strong>étudiant</strong>, <strong>enseignant</strong>, <strong>admin</strong>) sont automatiquement détectés via le token Keycloak.
-        </div>
-      </div>
-    </main>
-
+  <!-- ── CÔTÉ ILLUSTRATION ── -->
+  <div class="illus-panel">
+    <div class="illus-overlay"></div>
+    <svg class="classroom-svg" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <!-- Tableau -->
+      <rect x="60" y="30" width="400" height="120" rx="6" fill="#1a3a5c" stroke="#3D8FE0" stroke-width="2"/>
+      <text x="130" y="78" font-family="serif" font-size="17" fill="#7ec8ff" opacity=".9">École Supérieure de</text>
+      <text x="148" y="103" font-family="serif" font-size="17" fill="#7ec8ff" opacity=".9">Technologie de Salé</text>
+      <line x1="80" y1="120" x2="440" y2="120" stroke="#3D8FE0" stroke-width=".8" opacity=".4"/>
+      <!-- Pied tableau -->
+      <rect x="60" y="150" width="400" height="8" rx="2" fill="#0f2d4a"/>
+      <!-- Bureau enseignant -->
+      <rect x="185" y="168" width="150" height="26" rx="4" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1.5"/>
+      <rect x="212" y="194" width="18" height="28" rx="2" fill="#0a1929"/>
+      <rect x="290" y="194" width="18" height="28" rx="2" fill="#0a1929"/>
+      <!-- Rangée 1 -->
+      <rect x="60" y="245" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="150" y="245" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="240" y="245" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="330" y="245" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="420" y="245" width="60" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <!-- Rangée 2 -->
+      <rect x="60" y="295" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="150" y="295" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="240" y="295" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="330" y="295" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <rect x="420" y="295" width="60" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1"/>
+      <!-- Rangée 3 -->
+      <rect x="60" y="340" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1" opacity=".6"/>
+      <rect x="150" y="340" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1" opacity=".6"/>
+      <rect x="240" y="340" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1" opacity=".6"/>
+      <rect x="330" y="340" width="70" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1" opacity=".6"/>
+      <rect x="420" y="340" width="60" height="18" rx="3" fill="#0f2d4a" stroke="#1e4a7a" stroke-width="1" opacity=".6"/>
+      <!-- Lumière plafond -->
+      <ellipse cx="260" cy="12" rx="90" ry="9" fill="#3D8FE0" opacity=".12"/>
+    </svg>
+    <div class="illus-text">
+      <div class="illus-title">Espace Numérique<br/>de Travail</div>
+      <div class="illus-sub">Université Mohammed V · EST Salé</div>
+    </div>
   </div>
+
+  <!-- ── FORMULAIRE ── -->
+  <main class="form-panel">
+    <div class="card">
+      <div class="card-top-bar"></div>
+
+      <div class="card-header">
+        <span class="card-tag">Authentification</span>
+        <h2>Connexion<br/>à l'ENT</h2>
+        <p>Utilisez vos identifiants universitaires Keycloak.</p>
+      </div>
+
+      <div class="field">
+        <label for="username">Identifiant</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="eye-btn" id="eyeBtn" type="button" title="Afficher/masquer">
+            <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+      </div>
+
+      <button class="btn-login" id="loginBtn" type="button">
+        <span id="btnLabel">Se connecter</span>
+      </button>
+
+      <div class="error-msg" id="errorBox" role="alert">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorText"></span>
+      </div>
+
+      <div class="info-divider"><span>Accès</span></div>
+      <div class="info-box">
+        Vos droits (<strong>étudiant</strong>, <strong>enseignant</strong>, <strong>admin</strong>) sont détectés automatiquement via Keycloak.
+      </div>
+    </div>
+  </main>
+
+</div>
 
   <script>
 /* ═══════════════════════════════════════════════════

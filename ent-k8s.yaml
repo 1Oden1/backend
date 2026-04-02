@@ -1,0 +1,1693 @@
+# ================================================================
+#  ENT Salé — Déploiement Kubernetes complet
+#  Un seul fichier, kubectl apply -f ent-k8s.yaml
+#
+#  AVANT d'appliquer : remplace les mots de passe
+#  Cherche "CHANGE_ME" dans ce fichier et remplace par tes valeurs
+# ================================================================
+
+# ════════════════════════════════════════════════════════════════
+#  NAMESPACE
+# ════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ent-sale
+
+---
+# ════════════════════════════════════════════════════════════════
+#  SECRETS — mots de passe centralisés
+#  Remplace toutes les valeurs CHANGE_ME_*
+# ════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ent-credentials
+  namespace: ent-sale
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "CHANGE_ME_MYSQL_ROOT"
+  MYSQL_USER: "ent_user"
+  MYSQL_PASSWORD: "CHANGE_ME_MYSQL_PASS"
+  KEYCLOAK_ADMIN_USER: "admin"
+  KEYCLOAK_ADMIN_PASSWORD: "CHANGE_ME_KC_ADMIN"
+  KEYCLOAK_CLIENT_SECRET: "CHANGE_ME_KC_SECRET"
+  MINIO_ACCESS_KEY: "CHANGE_ME_MINIO_KEY"
+  MINIO_SECRET_KEY: "CHANGE_ME_MINIO_SECRET"
+  RABBITMQ_USER: "ent_user"
+  RABBITMQ_PASSWORD: "CHANGE_ME_RABBIT_PASS"
+  INTERNAL_TOKEN: "CHANGE_ME_INTERNAL_TOKEN"
+
+---
+# ════════════════════════════════════════════════════════════════
+#  CONFIGMAP — configuration non-sensible
+# ════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ent-config
+  namespace: ent-sale
+data:
+  KEYCLOAK_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "ent-sale"
+  KEYCLOAK_CLIENT_ID: "ent-backend"
+  JWT_ALGORITHM: "RS256"
+  MYSQL_HOST: "ent-mysql"
+  MYSQL_PORT: "3306"
+  MYSQL_DB_CALENDAR: "ent_calendar"
+  MYSQL_DB_NOTES: "ent_notes"
+  CASSANDRA_HOST: "ent-cassandra"
+  CASSANDRA_HOSTS: '["ent-cassandra"]'
+  CASSANDRA_DC: "datacenter1"
+  CASSANDRA_KEYSPACE_FILES: "ent_files"
+  CASSANDRA_KEYSPACE_MESSAGING: "ent_messaging"
+  MINIO_ENDPOINT: "ent-minio:9000"
+  MINIO_BUCKET: "ent-courses"
+  MINIO_SECURE: "false"
+  RABBITMQ_EXCHANGE: "ent.events"
+  RABBITMQ_QUEUE: "ms_messaging_queue"
+  MS_CALENDAR_URL: "http://ms-calendar:8000"
+  MS_NOTES_URL: "http://ms-notes:8000"
+  MS_MESSAGING_URL: "http://ms-messaging:8000"
+  MS_UPLOAD_URL: "http://ms-upload:8000"
+  MS_DOWNLOAD_URL: "http://ms-download:8000"
+  OLLAMA_URL: "http://ollama:11434"
+  OLLAMA_MODEL: "llama3"
+  MAX_FILE_SIZE_MB: "50"
+
+---
+# Script SQL init MySQL
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init
+  namespace: ent-sale
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS keycloak CHARACTER SET utf8mb4;
+    CREATE DATABASE IF NOT EXISTS ent_calendar CHARACTER SET utf8mb4;
+    CREATE DATABASE IF NOT EXISTS ent_notes CHARACTER SET utf8mb4;
+    GRANT ALL PRIVILEGES ON keycloak.* TO 'ent_user'@'%';
+    GRANT ALL PRIVILEGES ON ent_calendar.* TO 'ent_user'@'%';
+    GRANT ALL PRIVILEGES ON ent_notes.* TO 'ent_user'@'%';
+    FLUSH PRIVILEGES;
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MYSQL
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ent-mysql
+  namespace: ent-sale
+spec:
+  serviceName: ent-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ent-mysql
+  template:
+    metadata:
+      labels:
+        app: ent-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              value: "keycloak"
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)"]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: init-script
+          configMap:
+            name: mysql-init
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ent-mysql
+  namespace: ent-sale
+spec:
+  selector:
+    app: ent-mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None
+
+---
+# ════════════════════════════════════════════════════════════════
+#  CASSANDRA
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ent-cassandra
+  namespace: ent-sale
+spec:
+  serviceName: ent-cassandra
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ent-cassandra
+  template:
+    metadata:
+      labels:
+        app: ent-cassandra
+    spec:
+      containers:
+        - name: cassandra
+          image: cassandra:4.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9042
+          env:
+            - name: CASSANDRA_CLUSTER_NAME
+              value: "ENTCluster"
+            - name: CASSANDRA_DC
+              value: "datacenter1"
+            - name: CASSANDRA_RACK
+              value: "rack1"
+            - name: CASSANDRA_ENDPOINT_SNITCH
+              value: "GossipingPropertyFileSnitch"
+            - name: MAX_HEAP_SIZE
+              value: "512M"
+            - name: HEAP_NEWSIZE
+              value: "128M"
+          readinessProbe:
+            exec:
+              command: ["cqlsh", "-e", "describe keyspaces"]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 15
+            failureThreshold: 15
+          livenessProbe:
+            exec:
+              command: ["cqlsh", "-e", "describe keyspaces"]
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 15
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          volumeMounts:
+            - name: cassandra-data
+              mountPath: /var/lib/cassandra
+  volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ent-cassandra
+  namespace: ent-sale
+spec:
+  selector:
+    app: ent-cassandra
+  ports:
+    - port: 9042
+      targetPort: 9042
+  clusterIP: None
+
+---
+# ════════════════════════════════════════════════════════════════
+#  RABBITMQ
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ent-rabbitmq
+  namespace: ent-sale
+spec:
+  serviceName: ent-rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ent-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: ent-rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 4Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ent-rabbitmq
+  namespace: ent-sale
+spec:
+  selector:
+    app: ent-rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MINIO
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ent-minio
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ent-minio
+  template:
+    metadata:
+      labels:
+        app: ent-minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          imagePullPolicy: IfNotPresent
+          command: ["minio", "server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: ent-sale
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ent-minio
+  namespace: ent-sale
+spec:
+  selector:
+    app: ent-minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+
+---
+# ════════════════════════════════════════════════════════════════
+#  KEYCLOAK
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak
+  namespace: ent-sale
+spec:
+  serviceName: keycloak
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      initContainers:
+        - name: wait-mysql
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - "until nc -z ent-mysql 3306; do echo waiting for mysql...; sleep 3; done"
+      containers:
+        - name: keycloak
+          image: keycloak/keycloak:25.0
+          imagePullPolicy: IfNotPresent
+          command: ["start-dev", "--import-realm"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_USER
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_DB
+              value: "mysql"
+            - name: KC_DB_URL
+              value: "jdbc:mysql://ent-mysql:3306/keycloak"
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_USER
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_PASSWORD
+            - name: KC_HTTP_PORT
+              value: "8080"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 768Mi
+            limits:
+              cpu: 1500m
+              memory: 1536Mi
+      volumes:
+        - name: realm-config
+          configMap:
+            name: keycloak-realm-config
+            optional: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ent-sale
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-AUTH
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-auth
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-auth
+    spec:
+      containers:
+        - name: ms-auth
+          image: ent/ms-auth:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_CLIENT_ID
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_CLIENT_SECRET
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-auth
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-auth
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-UPLOAD
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-upload
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-upload
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-upload
+    spec:
+      initContainers:
+        - name: wait-cassandra
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-cassandra 9042; do echo waiting cassandra...; sleep 5; done"]
+      containers:
+        - name: ms-upload
+          image: ent/ms-upload:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: CASSANDRA_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_HOSTS
+            - name: CASSANDRA_KEYSPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_KEYSPACE_FILES
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_ENDPOINT
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_SECRET_KEY
+            - name: MINIO_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_BUCKET
+            - name: MINIO_SECURE
+              value: "false"
+            - name: MAX_FILE_SIZE_MB
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MAX_FILE_SIZE_MB
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-upload
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-upload
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-DOWNLOAD
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-download
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-download
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-download
+    spec:
+      initContainers:
+        - name: wait-cassandra
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-cassandra 9042; do echo waiting cassandra...; sleep 5; done"]
+      containers:
+        - name: ms-download
+          image: ent/ms-download:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: CASSANDRA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_HOST
+            - name: CASSANDRA_KEYSPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_KEYSPACE_FILES
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_ENDPOINT
+            - name: MINIO_ENDPOINT_PUBLIC
+              value: "localhost:9000"
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_SECRET_KEY
+            - name: MINIO_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_BUCKET
+            - name: MINIO_SECURE
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-download
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-download
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-CALENDAR
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-calendar
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-calendar
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-calendar
+    spec:
+      initContainers:
+        - name: wait-mysql
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-mysql 3306; do echo waiting mysql...; sleep 3; done"]
+      containers:
+        - name: ms-calendar
+          image: ent/ms-calendar:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_PORT
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_DB_CALENDAR
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_CLIENT_ID
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@ent-rabbitmq:5672/"
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-calendar
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-calendar
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-NOTES
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-notes
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-notes
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-notes
+    spec:
+      initContainers:
+        - name: wait-mysql
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-mysql 3306; do echo waiting mysql...; sleep 3; done"]
+        - name: wait-calendar
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ms-calendar 8000; do echo waiting calendar...; sleep 3; done"]
+      containers:
+        - name: ms-notes
+          image: ent/ms-notes:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_PORT
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_DB_NOTES
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_CLIENT_ID
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@ent-rabbitmq:5672/"
+            - name: MS_CALENDAR_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_CALENDAR_URL
+            - name: MS_MESSAGING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_MESSAGING_URL
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: INTERNAL_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-notes
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-notes
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-ADMIN
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-admin
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-admin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-admin
+    spec:
+      initContainers:
+        - name: wait-cassandra
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-cassandra 9042; do echo waiting cassandra...; sleep 5; done"]
+      containers:
+        - name: ms-admin
+          image: ent/ms-admin:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_PORT
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DB_CALENDAR
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_DB_CALENDAR
+            - name: MYSQL_DB_NOTES
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MYSQL_DB_NOTES
+            - name: CASSANDRA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_HOST
+            - name: CASSANDRA_KEYSPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_KEYSPACE_FILES
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_ENDPOINT
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: MINIO_SECRET_KEY
+            - name: MINIO_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MINIO_BUCKET
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_CLIENT_ID
+            - name: KEYCLOAK_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_USER
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: MS_CALENDAR_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_CALENDAR_URL
+            - name: MS_NOTES_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_NOTES_URL
+            - name: MS_MESSAGING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_MESSAGING_URL
+            - name: MS_UPLOAD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_UPLOAD_URL
+            - name: MS_DOWNLOAD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: MS_DOWNLOAD_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-admin
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-admin
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-MESSAGING
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-messaging
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-messaging
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-messaging
+    spec:
+      initContainers:
+        - name: wait-cassandra
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-cassandra 9042; do echo waiting cassandra...; sleep 5; done"]
+        - name: wait-rabbitmq
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z ent-rabbitmq 5672; do echo waiting rabbitmq...; sleep 3; done"]
+      containers:
+        - name: ms-messaging
+          image: ent/ms-messaging:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: CASSANDRA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_HOST
+            - name: CASSANDRA_KEYSPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: CASSANDRA_KEYSPACE_MESSAGING
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@ent-rabbitmq:5672/"
+            - name: RABBITMQ_EXCHANGE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: RABBITMQ_EXCHANGE
+            - name: RABBITMQ_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: RABBITMQ_QUEUE
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_CLIENT_ID
+            - name: KEYCLOAK_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_USER
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ent-credentials
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-messaging
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-messaging
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  MS-IA (sans Ollama — à activer quand Ollama tourne)
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-ia
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-ia
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-ia
+    spec:
+      containers:
+        - name: ms-ia
+          image: ent/ms-ia:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: KEYCLOAK_REALM
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: JWT_ALGORITHM
+            - name: OLLAMA_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: OLLAMA_URL
+            - name: OLLAMA_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: ent-config
+                  key: OLLAMA_MODEL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-ia
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: ms-ia
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# ════════════════════════════════════════════════════════════════
+#  FRONTEND
+# ════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: ent-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ent/frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: ent-sale
+spec:
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# ════════════════════════════════════════════════════════════════
+#  INGRESS — k3s Traefik
+# ════════════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ent-ingress
+  namespace: ent-sale
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+
+---
+# ════════════════════════════════════════════════════════════════
+#  HPA — Autoscaling CPU
+# ════════════════════════════════════════════════════════════════
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-ms-auth
+  namespace: ent-sale
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ms-auth
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-ms-download
+  namespace: ent-sale
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ms-download
+  minReplicas: 1
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-ms-notes
+  namespace: ent-sale
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ms-notes
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-ms-messaging
+  namespace: ent-sale
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ms-messaging
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -241,7 +241,6 @@ case "$ACTION" in
     add_helm_repos
     build_dependencies
     build_images
-    kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     import_keycloak_realm
     helm_deploy install
     wait_for_pods

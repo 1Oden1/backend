@@ -1,0 +1,113 @@
+{{- if .Values.ollama.enabled }}
+# ============================================================
+#  Ollama — StatefulSet + Service (+ init pull du modèle)
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ollama
+  namespace: {{ include "ent.namespace" . }}
+  labels:
+    {{- include "ent.labels" . | nindent 4 }}
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/component: ai-engine
+spec:
+  serviceName: ollama
+  replicas: {{ .Values.ollama.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ollama
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      initContainers:
+        # Pull automatique du modèle au premier démarrage
+        - name: pull-model
+          image: {{ .Values.ollama.image }}
+          command:
+            - sh
+            - -c
+            - |
+              # Démarrer ollama en arrière-plan pour le pull
+              ollama serve &
+              sleep 5
+              echo "Pull du modèle {{ .Values.ollama.model }}..."
+              ollama pull {{ .Values.ollama.model }}
+              echo "Modèle prêt."
+              kill %1
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image }}
+          command: ["ollama", "serve"]
+          ports:
+            - name: http
+              containerPort: 11434
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            - name: OLLAMA_KEEP_ALIVE
+              value: "24h"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.ollama.resources | nindent 12 }}
+          {{- if and .Values.ollama.gpu .Values.ollama.gpu.enabled }}
+          # Ressources GPU (nécessite le plugin nvidia-device-plugin)
+          resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.ollama.gpu.count | default 1 }}
+          {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: ollama-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.ollama.persistence.size }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: {{ include "ent.namespace" . }}
+  labels:
+    {{- include "ent.labels" . | nindent 4 }}
+    app.kubernetes.io/name: ollama
+spec:
+  selector:
+    app.kubernetes.io/name: ollama
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434
+  type: ClusterIP
+{{- end }}

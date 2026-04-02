@@ -1,0 +1,66 @@
+╔══════════════════════════════════════════════════════════════╗
+║        ENT Salé — Déploiement Kubernetes (Helm)             ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ Le chart ENT a été installé dans le namespace : {{ include "ent.namespace" . }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐  ACCÈS À L'APPLICATION
+  URL principale : http{{ if .Values.global.tls.enabled }}s{{ end }}://{{ .Values.global.domain }}
+
+  • Frontend admin      →  /admin/
+  • Frontend enseignant →  /enseignant/
+  • Frontend étudiant   →  /etudiant/
+  • Keycloak Admin      →  /auth/admin/
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋  VÉRIFICATION DU DÉPLOIEMENT
+
+  kubectl get pods -n {{ include "ent.namespace" . }}
+  kubectl get hpa   -n {{ include "ent.namespace" . }}
+  kubectl get svc   -n {{ include "ent.namespace" . }}
+  kubectl get ingress -n {{ include "ent.namespace" . }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔑  COMPTES DE TEST
+  Admin     : admin-ent / admin123
+  Enseignant: enseignant1 / enseignant123
+  Étudiant  : etudiant1 / etudiant123
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  ÉTAPES POST-INSTALLATION
+
+  1. Importer le realm Keycloak si pas auto-importé :
+     kubectl create configmap keycloak-realm-config \
+       --from-file=realm-export.json=ms-auth/keycloak/realm-export.json \
+       -n {{ include "ent.namespace" . }}
+
+  2. Vérifier le pull du modèle llama3 dans Ollama :
+     kubectl logs -n {{ include "ent.namespace" . }} \
+       $(kubectl get pod -n {{ include "ent.namespace" . }} -l app.kubernetes.io/name=ollama -o name) \
+       -c pull-model
+
+  3. Surveiller le scaling automatique :
+     watch kubectl get hpa -n {{ include "ent.namespace" . }}
+
+  4. DNS : pointer {{ .Values.global.domain }} vers l'IP de l'Ingress Controller :
+     kubectl get svc -n ingress-nginx ingress-nginx-controller
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊  SCALING AUTOMATIQUE (HPA)
+  Service       MinR  MaxR  Seuil CPU
+  ms-auth        2     6      70%
+  ms-upload      2     6      70%
+  ms-download    2    10      70%  ← fort trafic
+  ms-calendar    2     8      70%
+  ms-notes       2     8      70%
+  ms-admin       1     3      70%
+  ms-messaging   2     8      70%
+  ms-ia          1     4      80%  ← CPU intensif
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
